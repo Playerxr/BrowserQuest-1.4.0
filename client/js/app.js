@@ -100,7 +100,15 @@ define(['jquery', 'storage'], function($, Storage) {
         },
 
         tryStartingGame: function() {
-            if(this.starting) return;        // Already loading
+            var now = Date.now();
+            if(this.starting) {
+                if(this._startingTimestamp && (now - this._startingTimestamp > 8000)) {
+                    this.setPlayButtonState(true);
+                } else {
+                    return; // Already loading
+                }
+            }
+            this._startingTimestamp = now;
 
             var self = this;
             var action = this.createNewCharacterFormActive() ? 'create' : 'login';
@@ -114,7 +122,10 @@ define(['jquery', 'storage'], function($, Storage) {
                 userpw2 = String(this.$pwinput2.val() || '');
             }
 
-            if(!this.validateFormFields(username, userpw, userpw2, email)) return;
+            if(!this.validateFormFields(username, userpw, userpw2, email)) {
+                this.setPlayButtonState(true);
+                return;
+            }
             
             this.setPlayButtonState(false);
 
@@ -164,8 +175,11 @@ define(['jquery', 'storage'], function($, Storage) {
 
                         switch(result.reason) {
                             case 'invalidlogin':
-                                // Login information was not correct (either username or password)
-                                self.addValidationError(null, 'Le nom du héros ou le mot de passe est incorrect.');
+                                if(action === 'login') {
+                                    self.addValidationError(null, "Compte introuvable ou mot de passe incorrect. Nouveau joueur ? Cliquez ci-dessous sur 'Créer un compte'.");
+                                } else {
+                                    self.addValidationError(null, "Le pseudo ou mot de passe est invalide (2 à 12 caractères).");
+                                }
                                 self.getUsernameField().focus();
                                 break;
                             case 'userexists':
@@ -201,7 +215,14 @@ define(['jquery', 'storage'], function($, Storage) {
             $('#google-login-btn .google-text').text("Connexion en cours...");
             $('#google-signup-btn .google-text').text("Connexion en cours...");
 
-            var cleanPreferred = String(preferredName || '').replace(/[^a-zA-Z0-9_-]/g, '').trim().substr(0, 16);
+            var cleanPreferred = String(preferredName || '').replace(/[^a-zA-Z0-9_\-\u00C0-\u017F]/g, '').trim().substr(0, 12);
+
+            var resetBtns = function() {
+                $('.google-auth-btn').removeClass('loading').prop('disabled', false);
+                $('#google-login-btn .google-text').text("Se connecter avec Google");
+                $('#google-signup-btn .google-text').text("Créer avec Google");
+                self.setPlayButtonState(true);
+            };
 
             var doConnect = function() {
                 var host = window.location.hostname || "localhost",
@@ -218,14 +239,11 @@ define(['jquery', 'storage'], function($, Storage) {
                 self.center();
                 try {
                     self.game.run('google', function(result) {
-                        $('.google-auth-btn').removeClass('loading');
-                        $('#google-login-btn .google-text').text("Se connecter avec Google");
-                        $('#google-signup-btn .google-text').text("Créer avec Google");
+                        resetBtns();
 
                         if(result.success === true) {
                             self.start();
                         } else {
-                            self.setPlayButtonState(true);
                             switch(result.reason) {
                                 case 'loggedin':
                                     self.addValidationError(null, 'Un joueur avec ce compte est déjà en jeu.');
@@ -240,11 +258,8 @@ define(['jquery', 'storage'], function($, Storage) {
                         }
                     });
                 } catch(error) {
-                    $('.google-auth-btn').removeClass('loading');
-                    $('#google-login-btn .google-text').text("Se connecter avec Google");
-                    $('#google-signup-btn .google-text').text("Créer avec Google");
+                    resetBtns();
                     self.game.started = false;
-                    self.setPlayButtonState(true);
                     self.addValidationError(null, 'Le jeu ne peut pas démarrer. Rechargez la page.');
                 }
             };
@@ -258,10 +273,7 @@ define(['jquery', 'storage'], function($, Storage) {
                         doConnect();
                     } else if(Date.now() >= waitDeadline) {
                         clearInterval(watchReady);
-                        $('.google-auth-btn').removeClass('loading');
-                        $('#google-login-btn .google-text').text("Se connecter avec Google");
-                        $('#google-signup-btn .google-text').text("Créer avec Google");
-                        self.setPlayButtonState(true);
+                        resetBtns();
                         self.addValidationError(null, 'Le chargement du jeu a expiré. Rechargez la page.');
                     }
                 }, 100);
@@ -280,19 +292,131 @@ define(['jquery', 'storage'], function($, Storage) {
                 self.setPlayButtonState(true);
             };
 
+            var clearPendingFlags = function() {
+                try { sessionStorage.removeItem('nova_google_pending'); } catch(e) {}
+                try { localStorage.removeItem('nova_google_pending'); } catch(e) {}
+            };
+
+            var setPendingFlags = function() {
+                try { sessionStorage.setItem('nova_google_pending', '1'); } catch(e) {}
+                try { localStorage.setItem('nova_google_pending', '1'); } catch(e) {}
+            };
+
+            var hasPendingFlags = function() {
+                var p1 = false, p2 = false;
+                try { p1 = sessionStorage.getItem('nova_google_pending') === '1'; } catch(e) {}
+                try { p2 = localStorage.getItem('nova_google_pending') === '1'; } catch(e) {}
+                return p1 || p2;
+            };
+
+            var triggerGoogleAuth = function(forceRedirect) {
+                if(!window.firebase || !firebase.auth) {
+                    self.showGoogleAlert("Firebase non initialisé sur cette page. Rechargez le jeu.");
+                    return;
+                }
+
+                self.clearValidationErrors();
+                $('#google-alert-banner').hide().empty();
+
+                var $btns = $('.google-auth-btn');
+                $btns.addClass('loading');
+                $btns.find('.google-text').text("Connexion en cours...");
+                self.setPlayButtonState(false);
+
+                // Timeout de sécurité 30s
+                var safetyTimer = setTimeout(function() {
+                    resetGoogleBtns();
+                    self.showGoogleAlert("Le délai d'attente Google a expiré. Utilisez le lien de connexion directe.");
+                }, 30000);
+
+                var handleSuccessUser = function(user) {
+                    clearTimeout(safetyTimer);
+                    clearPendingFlags();
+                    return user.getIdToken(true).then(function(idToken) {
+                        var prefName = (self.getUsernameField && self.getUsernameField().length) ? self.getUsernameField().val() : '';
+                        self.startGoogleGame(idToken, prefName || user.displayName);
+                    }).catch(function(tokenErr) {
+                        resetGoogleBtns();
+                        self.showGoogleAlert("Impossible d'obtenir le jeton d'authentification Google.");
+                    });
+                };
+
+                // Si déjà connecté avec Firebase dans cette session, réutiliser directement le compte
+                var currentUser = firebase.auth().currentUser;
+                if(currentUser) {
+                    handleSuccessUser(currentUser).catch(function() {
+                        firebase.auth().signOut().then(function() {
+                            resetGoogleBtns();
+                        });
+                    });
+                    return;
+                }
+
+                var provider = new firebase.auth.GoogleAuthProvider();
+                provider.setCustomParameters({ prompt: 'select_account' });
+
+                var isMobileDevice = !self.isDesktop || (window.innerWidth <= 768) || (typeof Detect !== 'undefined' && Detect.isMobile && Detect.isMobile());
+
+                // Sur mobile ou si l'utilisateur a cliqué sur le lien direct, utiliser immédiatement la redirection
+                if(forceRedirect || isMobileDevice) {
+                    $btns.find('.google-text').text("Redirection Google...");
+                    setPendingFlags();
+                    clearTimeout(safetyTimer);
+                    firebase.auth().signInWithRedirect(provider);
+                    return;
+                }
+
+                // Sur desktop, essayer en popup avec fallback automatique
+                firebase.auth().signInWithPopup(provider).then(function(result) {
+                    return handleSuccessUser(result.user);
+                }).catch(function(error) {
+                    clearTimeout(safetyTimer);
+                    resetGoogleBtns();
+                    if(!error) return;
+
+                    console.error("[Google Auth Error]", error);
+
+                    // Si popup bloqué ou fermé automatiquement : fallback immédiat en redirection
+                    if(error.code === 'auth/popup-blocked' ||
+                       error.code === 'auth/cancelled-popup-request' ||
+                       (error.code === 'auth/popup-closed-by-user' && error.message && error.message.indexOf('blocked') !== -1)) {
+                        $btns.addClass('loading');
+                        $btns.find('.google-text').text("Redirection Google...");
+                        setPendingFlags();
+                        firebase.auth().signInWithRedirect(provider);
+                        return;
+                    }
+
+                    if(error.code === 'auth/popup-closed-by-user') {
+                        self.showGoogleAlert("Connexion annulée. Vous pouvez aussi cliquer sur 'Connexion Google directe' ci-dessous.");
+                        return;
+                    }
+
+                    var msg = "Connexion Google : ";
+                    if(error.code === 'auth/unauthorized-domain') {
+                        msg += "Ce domaine n'est pas autorisé dans Firebase Console.";
+                    } else if(error.code === 'auth/operation-not-allowed') {
+                        msg += "Le mode Google n'est pas activé dans Firebase Console.";
+                    } else {
+                        msg += (error.message || error.code);
+                    }
+                    self.showGoogleAlert(msg);
+                });
+            };
+
             if(window.firebase && firebase.auth) {
                 // 1. Détection du retour d'une redirection éventuelle
                 try {
                     firebase.auth().getRedirectResult().then(function(result) {
                         if(result && result.user) {
-                            try { sessionStorage.removeItem('nova_google_pending'); } catch(e) {}
-                            result.user.getIdToken().then(function(idToken) {
+                            clearPendingFlags();
+                            result.user.getIdToken(true).then(function(idToken) {
                                 var prefName = (self.getUsernameField && self.getUsernameField().length) ? self.getUsernameField().val() : '';
                                 self.startGoogleGame(idToken, prefName || result.user.displayName);
                             });
                         }
                     }).catch(function(err) {
-                        try { sessionStorage.removeItem('nova_google_pending'); } catch(e) {}
+                        clearPendingFlags();
                         if(err && err.code && err.code !== 'auth/credential-already-in-use') {
                             self.showGoogleAlert("Erreur de redirection Google : " + (err.message || err.code));
                         }
@@ -303,11 +427,9 @@ define(['jquery', 'storage'], function($, Storage) {
                 try {
                     firebase.auth().onAuthStateChanged(function(user) {
                         if(user) {
-                            var pending = false;
-                            try { pending = sessionStorage.getItem('nova_google_pending') === '1'; } catch(e) {}
-                            if(pending && !self.game.started) {
-                                try { sessionStorage.removeItem('nova_google_pending'); } catch(e) {}
-                                user.getIdToken().then(function(idToken) {
+                            if(hasPendingFlags() && (!self.game || !self.game.started)) {
+                                clearPendingFlags();
+                                user.getIdToken(true).then(function(idToken) {
                                     var prefName = (self.getUsernameField && self.getUsernameField().length) ? self.getUsernameField().val() : '';
                                     self.startGoogleGame(idToken, prefName || user.displayName);
                                 });
@@ -321,70 +443,12 @@ define(['jquery', 'storage'], function($, Storage) {
                 e.preventDefault();
                 var $btn = $(this);
                 if($btn.hasClass('loading') || self.starting) return;
+                triggerGoogleAuth(false);
+            });
 
-                if(!window.firebase || !firebase.auth) {
-                    self.showGoogleAlert("Firebase non initialisé sur cette page. Rechargez le jeu.");
-                    return;
-                }
-
-                self.clearValidationErrors();
-                $('#google-alert-banner').hide().empty();
-
-                $btn.addClass('loading');
-                $btn.find('.google-text').text("Connexion en cours...");
-                self.setPlayButtonState(false);
-
-                // Timeout de sécurité 30s : évite que le bouton ne tourne indéfiniment
-                var safetyTimer = setTimeout(function() {
-                    resetGoogleBtns();
-                    self.showGoogleAlert("Le délai d'attente Google a expiré. Autorisez les popups ou rechargez.");
-                }, 30000);
-
-                var handleSuccessUser = function(user) {
-                    clearTimeout(safetyTimer);
-                    return user.getIdToken(true).then(function(idToken) {
-                        var prefName = (self.getUsernameField && self.getUsernameField().length) ? self.getUsernameField().val() : '';
-                        self.startGoogleGame(idToken, prefName || user.displayName);
-                    });
-                };
-
-                var provider = new firebase.auth.GoogleAuthProvider();
-                provider.setCustomParameters({ prompt: 'select_account' });
-
-                // Essai standard en popup (compatible mobile et desktop lors d'un clic direct)
-                firebase.auth().signInWithPopup(provider).then(function(result) {
-                    return handleSuccessUser(result.user);
-                }).catch(function(error) {
-                    clearTimeout(safetyTimer);
-                    resetGoogleBtns();
-                    if(!error) return;
-
-                    console.error("[Google Auth Error]", error);
-
-                    // Si popup bloqué par le navigateur : fallback immédiat en redirection
-                    if(error.code === 'auth/popup-blocked' || (error.code === 'auth/popup-closed-by-user' && error.message && error.message.indexOf('blocked') !== -1)) {
-                        $btn.addClass('loading');
-                        $btn.find('.google-text').text("Redirection Google...");
-                        try { sessionStorage.setItem('nova_google_pending', '1'); } catch(e) {}
-                        firebase.auth().signInWithRedirect(provider);
-                        return;
-                    }
-
-                    // Si l'utilisateur referme la popup de sélection
-                    if(error.code === 'auth/popup-closed-by-user') {
-                        return;
-                    }
-
-                    var msg = "Connexion Google : ";
-                    if(error.code === 'auth/unauthorized-domain') {
-                        msg += "Ce domaine n'est pas autorisé dans Firebase Console (Authentication > Paramètres > Domaines autorisés).";
-                    } else if(error.code === 'auth/operation-not-allowed') {
-                        msg += "Le mode Google n'est pas activé dans Firebase Console (Authentication > Sign-in method).";
-                    } else {
-                        msg += (error.message || error.code);
-                    }
-                    self.showGoogleAlert(msg);
-                });
+            $(document).on('click', '.google-redirect-btn', function(e) {
+                e.preventDefault();
+                triggerGoogleAuth(true);
             });
         },
 
@@ -455,33 +519,51 @@ define(['jquery', 'storage'], function($, Storage) {
 
             if(!username) {
                 this.addValidationError(this.getUsernameField(), 'Veuillez entrer un nom de personnage.');
+                this.setPlayButtonState(true);
+                return false;
+            }
+
+            if(username.length < 2 || username.length > 12) {
+                this.addValidationError(this.getUsernameField(), 'Le pseudo doit contenir entre 2 et 12 caractères.');
+                this.setPlayButtonState(true);
+                return false;
+            }
+
+            if(!/^[a-zA-Z0-9_\-\u00C0-\u017F]+$/.test(username)) {
+                this.addValidationError(this.getUsernameField(), 'Le pseudo ne peut contenir que des lettres, chiffres ou tirets.');
+                this.setPlayButtonState(true);
                 return false;
             }
 
             if(!userpw) {
                 this.addValidationError(this.getPasswordField(), 'Veuillez entrer un mot de passe.');
+                this.setPlayButtonState(true);
                 return false;
             }
 
             if(userpw.length > 256) {
                 this.addValidationError(this.getPasswordField(), 'Le mot de passe doit contenir au maximum 256 caractères.');
+                this.setPlayButtonState(true);
                 return false;
             }
 
             if(this.createNewCharacterFormActive()) {     // In Create New Character form (rather than login form)
                 if(!userpw2) {
                     this.addValidationError(this.$pwinput2, 'Veuillez confirmer votre mot de passe.');
+                    this.setPlayButtonState(true);
                     return false;
                 }
 
                 if(userpw !== userpw2) {
                     this.addValidationError(this.$pwinput2, 'Les mots de passe ne correspondent pas.');
+                    this.setPlayButtonState(true);
                     return false;
                 }
 
                 // Email field is not required, but if it's filled out, then it should look like a valid email.
                 if(email && !this.validateEmail(email)) {
                     this.addValidationError(this.$email, 'L\'adresse email semble invalide (ou laissez ce champ vide).');
+                    this.setPlayButtonState(true);
                     return false;
                 }
             }
@@ -1005,11 +1087,16 @@ define(['jquery', 'storage'], function($, Storage) {
         animateParchment: function(origin, destination) {
             var self = this,
                 $parchment = $('#parchment'),
-                duration = 1;
+                duration = 0.5;
 
             this.clearValidationErrors();
+            this.setPlayButtonState(true);
 
             if(!this.isParchmentReady) {
+                $parchment.removeClass('createcharacter loadcharacter confirmation credits about legal error animate');
+                $parchment.addClass(destination);
+                this.isParchmentReady = true;
+                this.setPlayButtonState(true);
                 return;
             }
             this.isParchmentReady = false;
@@ -1020,6 +1107,7 @@ define(['jquery', 'storage'], function($, Storage) {
             setTimeout(function() {
                 $parchment.removeClass('animate').addClass(destination);
                 self.isParchmentReady = true;
+                self.setPlayButtonState(true);
             }, duration * 1000);
         },
 

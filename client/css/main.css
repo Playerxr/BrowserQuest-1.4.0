@@ -275,7 +275,7 @@ footer, header, hgroup, menu, nav, section {
     @-webkit-keyframes blink { 0% {color:red;} 100% {color:#880000;}}
     .blink {-webkit-animation:blink 0.3s linear 5 alternate;-moz-animation:blink 0.3s linear 5 alternate;animation:blink 0.3s linear 5 alternate;}
 
-    #credits, #loadcharacter, #confirmation, #death, #error, #about, #legal {position:absolute;left:50%;text-align:center;font-family:'GraphicPixel', sans-serif;z-index:1000;}
+    #credits, #createcharacter, #loadcharacter, #confirmation, #death, #error, #about, #legal {position:absolute;left:50%;text-align:center;font-family:'GraphicPixel', sans-serif;z-index:1000;}
     
     #playerimage {image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast;}
     
@@ -519,7 +519,7 @@ footer, header, hgroup, menu, nav, section {
         #logo, #logosparks, .left-ornament, .right-ornament, #character, #character div, .button, .button div, #respawn, #scroll, #instructions, .icon, .avatar, .close, #note, .ribbon .top, .ribbon .bottom, #about .img, .ext-link {background-size:1266px auto;}
         #logo {height:126px;width:687px;position:absolute;top:10%;left:50%;margin-left:-344px;z-index:3;}
         #logosparks {width:687px;height:126px;z-index:4;-moz-animation:logo3 .8s steps(6, end) infinite;-webkit-animation:logo3 .8s steps(6, end) infinite;-o-animation:logo3 .8s steps(6, end) infinite;-ms-animation:logo3 .8s steps(6, end) infinite;}
-        #parchment, #loadcharacter, #confirmation, #error, #legal {width:1266px;height:546px;position:absolute;top:55%;left:50%;margin-left:-633px;margin-top:-273px;font-size:30px;text-align:center;z-index:2;}
+        #parchment, #createcharacter, #loadcharacter, #confirmation, #error, #legal {width:1266px;height:546px;position:absolute;top:55%;left:50%;margin-left:-633px;margin-top:-273px;font-size:30px;text-align:center;z-index:2;}
         #parchment h1 {margin-top:60px;font-weight:normal;}
         .left-ornament, .right-ornament {height:36px;width:93px;display:inline-block;margin:0 20px;position:relative;top:12px;}
         .left-ornament {background-position:-1062px 0;}
@@ -537,7 +537,7 @@ footer, header, hgroup, menu, nav, section {
         .play.loading img {width:24px;height:24px;}
         .stroke, .achievement-name {text-shadow:3px 3px 0 #373737, 3px -3px 0 #373737, 0 3px 0 #373737, 3px 0 0 #373737, -3px 3px 0 #373737, -3px -3px 0 #373737, 0 -3px 0 #373737, 0 3px 0 #373737, -3px 0 0 #373737;}
 
-        #loadcharacter h1, #confirmation h1, #error h1, #legal h1 {margin-top:30px;}
+        #createcharacter h1, #loadcharacter h1, #confirmation h1, #error h1, #legal h1 {margin-top:30px;}
         #playername {margin-top:15px;}
         .loadcharacter .play, .confirmation .delete {margin:15px auto 15px auto;}
         #confirmation p, #error p {font-size:30px;margin-top:60px;line-height:40px;}
@@ -696,7 +696,7 @@ footer, header, hgroup, menu, nav, section {
         #logo, #logosparks, .left-ornament, .right-ornament, #character, #character div, .button, .button div, #respawn, #scroll, #instructions, .icon, .avatar, .close, #note, .ribbon .top, .ribbon .bottom, #about .img, .ext-link {background-size:844px auto;}
         #logo {height:84px;width:458px;position:absolute;top:10%;left:50%;margin-left:-229px;z-index:3;}
         #logosparks {width:458px;height:84px;z-index:4;-moz-animation:logo2 .8s steps(6, end) infinite;-webkit-animation:logo2 .8s steps(6, end) infinite;-o-animation:logo2 .8s steps(6, end) infinite;-ms-animation:logo2 .8s steps(6, end) infinite;}
-        #parchment, #loadcharacter, #confirmation, #error, #legal {width:844px;height:364px;position:absolute;top:55%;left:50%;margin-left:-422px;margin-top:-182px;font-size:20px;text-align:center; z-index:2;}
+        #parchment, #createcharacter, #loadcharacter, #confirmation, #error, #legal {width:844px;height:364px;position:absolute;top:55%;left:50%;margin-left:-422px;margin-top:-182px;font-size:20px;text-align:center; z-index:2;}
         #parchment h1 {margin-top:40px;font-weight:normal;}
         .left-ornament, .right-ornament {height:24px;width:62px;display:inline-block;margin:0 15px;position:relative;top:7px;}
         .left-ornament {background-position:-708px 0;}
@@ -714,7 +714,7 @@ footer, header, hgroup, menu, nav, section {
         .play.loading img {height:16px;width:16px;}
         .stroke, .achievement-name {text-shadow:2px 2px 0 #373737, 2px -2px 0 #373737, 0 2px 0 #373737, 2px 0 0 #373737, -2px 2px 0 #373737, -2px -2px 0 #373737, 0 -2px 0 #373737, 0 2px 0 #373737, -2px 0 0 #373737;}
         
-        #loadcharacter h1, #confirmation h1, #error h1, #legal h1 {margin-top:20px;}
+        #createcharacter h1, #loadcharacter h1, #confirmation h1, #error h1, #legal h1 {margin-top:20px;}
         #playername {margin-top:10px;}
         .loadcharacter .play, .confirmation .delete {margin:10px auto 10px auto;}
         #confirmation p, #error p {font-size:20px;margin-top:40px;line-height:30px;}
@@ -893,7 +893,7 @@ footer, header, hgroup, menu, nav, section {
         #logo, #logosparks, .left-ornament, .right-ornament, #character, #character div, .button, .button div, #respawn, #scroll, #instructions, .icon, .avatar, .close, #note, .ribbon .top, .ribbon .bottom, #about .img, .ext-link {background-size:422px auto;}
         #logo {height:42px;width:229px;position:absolute;top:10%;left:50%;margin-left:-114px;z-index:3;}
         #logosparks {width:229px;height:42px;z-index:4;-moz-animation:logo1 .8s steps(6, end) infinite;-webkit-animation:logo1 .8s steps(6, end) infinite;-o-animation:logo1 .8s steps(6, end) infinite;-ms-animation:logo1 .8s steps(6, end) infinite;}
-        #parchment, #loadcharacter, #confirmation, #error, #legal {width:422px;height:182px;position:absolute;top:50%;left:50%;margin-left:-211px;margin-top:-91px;font-size:10px;text-align:center;z-index:2;}
+        #parchment, #createcharacter, #loadcharacter, #confirmation, #error, #legal {width:422px;height:182px;position:absolute;top:50%;left:50%;margin-left:-211px;margin-top:-91px;font-size:10px;text-align:center;z-index:2;}
         #parchment h1, #instructions h1 {margin-top:20px;font-weight:normal;}
         .left-ornament, .right-ornament {height:12px;width:31px;display:inline-block;margin:0 10px;position:relative;top:3px;}
         .left-ornament {background-position:-354px 0;}
@@ -910,7 +910,7 @@ footer, header, hgroup, menu, nav, section {
         .play.loading img {height:11px;width:11px;}
         .stroke, .achievement-name {text-shadow:1px 1px 0 #373737, 1px -1px 0 #373737, 0 1px 0 #373737, 1px 0 0 #373737, -1px 1px 0 #373737, -1px -1px 0 #373737, 0 -1px 0 #373737, 0 1px 0 #373737, -1px 0 0 #373737;}
         
-        #loadcharacter h1, #confirmation h1, #error h1, #legal h1 {margin-top:20px;}
+        #createcharacter h1, #loadcharacter h1, #confirmation h1, #error h1, #legal h1 {margin-top:20px;}
         #playername {margin-top:5px;}
         .loadcharacter .play, .confirmation .delete {margin:5px auto 5px auto;}
         #confirmation p, #error p, #legal p {font-size:10px;margin-top:20px;line-height:20px;}
@@ -2702,4 +2702,30 @@ html, body {
     text-align: center;
     box-shadow: 0 1px 3px rgba(0,0,0,0.25);
     line-height: 1.3;
+}
+.google-fallback-link {
+    display: block;
+    font-size: 11px !important;
+    color: #4a341e !important;
+    text-decoration: underline !important;
+    cursor: pointer !important;
+    margin: 2px auto 6px auto !important;
+    text-align: center;
+    user-select: none;
+}
+.google-fallback-link:hover {
+    color: #8c2514 !important;
+}
+#create-new, #back-to-login {
+    cursor: pointer;
+    margin-top: 10px;
+}
+#create-new span, #back-to-login span {
+    color: #ffd070;
+    font-size: 14px;
+    text-decoration: underline;
+    transition: color 0.2s ease;
+}
+#create-new span:hover, #back-to-login span:hover {
+    color: #fff;
 }

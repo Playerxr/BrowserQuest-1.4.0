@@ -99,24 +99,31 @@ define(['jquery', 'app', 'entrypoint'], function($, App, EntryPoint) {
 
             $('#create-new').click(function(e) {
                 e.preventDefault();
-                app.animateParchment('loadcharacter', 'confirmation');
+                app.setPlayButtonState(true);
+                app.clearValidationErrors();
+                app.animateParchment('loadcharacter', 'createcharacter');
             });
 
             $('#continue').click(function(e) {
                 e.preventDefault();
                 app.storage.clear();
+                app.setPlayButtonState(true);
+                app.clearValidationErrors();
                 app.animateParchment('confirmation', 'createcharacter');
                 $('body').removeClass('returning');
-                app.clearValidationErrors();
             });
 
             $('#cancel').click(function(e) {
                 e.preventDefault();
+                app.setPlayButtonState(true);
+                app.clearValidationErrors();
                 app.animateParchment('confirmation', 'loadcharacter');
             });
 
             $('#back-to-login').click(function(e) {
                 e.preventDefault();
+                app.setPlayButtonState(true);
+                app.clearValidationErrors();
                 app.animateParchment('createcharacter', 'loadcharacter');
             });
 
