@@ -353,7 +353,7 @@ define(['jquery', 'storage'], function($, Storage) {
                 }
 
                 var provider = new firebase.auth.GoogleAuthProvider();
-                provider.setCustomParameters({ prompt: 'select_account' });
+                // Même configuration épurée que dans openrp-main pour éviter les blocages de popup
 
                 var isMobileDevice = !self.isDesktop || (window.innerWidth <= 768) || (typeof Detect !== 'undefined' && Detect.isMobile && Detect.isMobile());
 
