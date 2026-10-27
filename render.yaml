@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: nova-quest-game
+    env: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: frankfurt
+    envVars:
+      - key: PORT
+        value: "8000"
+      - key: NODE_ENV
+        value: production
+      - key: BROWSERQUEST_TRUST_PROXY
+        value: "true"
+      - key: NOVA_ADMIN_PASSWORD
+        value: nova-admin-2026

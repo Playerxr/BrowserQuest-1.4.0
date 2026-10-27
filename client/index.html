@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<!--
+   _   _                    ___                  _   
+  | \ | | _____   ____ _   / _ \ _   _  ___  ___| |_ 
+  |  \| |/ _ \ \ / / _` | | | | | | | |/ _ \/ __| __|
+  | |\  | (_) \ V / (_| | | |_| | |_| |  __/\__ \ |_ 
+  |_| \_|\___/ \_/ \__,_|  \__\_\\__,_|\___||___/\__|
+
+  Nova Quest — Mini-MMORPG 2D HTML5 & WebSockets
+  Entreprise de développement : UNIVERS NOVA STUDIO
+  Éditeur : github.com/Playerxr
+-->
+<html lang="fr">
+	<head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=Edge;chrome=1">
+        <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval' data: blob: wss: ws: https:; script-src * 'unsafe-inline' 'unsafe-eval' https: blob:; style-src * 'unsafe-inline' https:; font-src * data: https:; connect-src * wss: ws: https:;">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+        <link rel="icon" type="image/png" href="img/common/favicon.png">
+        <meta property="og:title" content="Nova Quest — UNIVERS NOVA STUDIO">
+        <meta property="og:type" content="website">
+        <meta property="og:url" content="https://github.com/Playerxr">
+        <meta property="og:image" content="img/common/promo-title.jpg">
+        <meta property="og:site_name" content="Nova Quest">
+        <meta property="og:description" content="Jouez à Nova Quest, un MMORPG HTML5 multijoueur développé par UNIVERS NOVA STUDIO (Éditeur : github.com/Playerxr) !">
+        <link rel="stylesheet" href="css/main.css" type="text/css">
+        <link rel="stylesheet" href="css/achievements.css" type="text/css">
+
+        <link href="img/common/apple-touch-icon-57x57.png" rel="apple-touch-icon-precomposed" sizes="57x57">
+        <link href="img/common/apple-touch-icon-72x72.png" rel="apple-touch-icon-precomposed" sizes="72x72">
+        <link href="img/common/apple-touch-icon-114x114.png" rel="apple-touch-icon-precomposed" sizes="114x114">
+        <link href="img/common/apple-touch-icon-144x144.png" rel="apple-touch-icon-precomposed" sizes="144x144">
+
+        <script src="js/lib/modernizr.js" type="text/javascript"></script>
+        <!--[if lt IE 9]>
+                <link rel="stylesheet" href="css/ie.css" type="text/css">
+                <script src="js/lib/css3-mediaqueries.js" type="text/javascript"></script>
+                <script type="text/javascript">
+                document.getElementById('parchment').className = ('error');
+                </script>
+        <![endif]-->
+        <script src="js/detect.js" type="text/javascript"></script>
+        <!-- Firebase SDK v10 (Compat) -->
+        <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics-compat.js"></script>
+        <script type="text/javascript">
+            window.firebaseConfig = {
+                apiKey: "AIzaSyA-WdbYNN-Ks3PJAg7ZvMshSD9TxQnFPpI",
+                authDomain: "nova-quest-game.firebaseapp.com",
+                projectId: "nova-quest-game",
+                storageBucket: "nova-quest-game.firebasestorage.app",
+                messagingSenderId: "808258506442",
+                appId: "1:808258506442:web:e4013db9a481ea1854ae33",
+                measurementId: "G-2H3X63TX1S"
+            };
+            try {
+                if(window.firebase) {
+                    firebase.initializeApp(window.firebaseConfig);
+                    if(firebase.analytics) {
+                        window.novaAnalytics = firebase.analytics();
+                    }
+                }
+            } catch(e) {
+                console.warn("Firebase client init warning:", e);
+            }
+        </script>
+        <title>Nova Quest — UNIVERS NOVA STUDIO</title>
+	</head>
+    <!--[if lt IE 9]>
+	<body class="intro upscaled">
+    <![endif]-->
+	<body class="intro">
+	    <noscript>
+	       <div class="alert">
+	           Vous devez activer JavaScript pour jouer à Nova Quest.
+	       </div>
+	    </noscript>
+	    <div id="intro">
+	        <h1 id="logo">
+	           <span id="logosparks"></span>
+	        </h1>
+	        <article id="portrait">
+	            <p>
+	               Veuillez tourner votre appareil en mode paysage
+	            </p>
+	            <div id="tilt"></div>
+	        </article>
+	        	        <section id="parchment" class="loadcharacter">
+	            <div class="parchment-left"></div>
+	            <div class="parchment-middle">
+                    <article id="createcharacter">
+          	           <h1>
+          	               <span class="left-ornament"></span>
+          	               Créer un Compte
+          	               <span class="right-ornament"></span>
+                          </h1>
+                          <div class="google-auth-btn" id="google-signup-btn">
+                              <span class="google-icon"></span>
+                              <span class="google-text">Créer avec Google</span>
+                          </div>
+                          <div class="auth-divider"><span>OU</span></div>
+                          <form action="none" method="get" accept-charset="utf-8" onsubmit="return false;">
+                              <label for="nameinput" class="sr-only">Pseudo</label>
+                              <input type="text" id="nameinput" class="stroke" name="player-name" placeholder="Pseudo" maxlength="12" autocomplete="username" aria-label="Pseudo">
+                              <label for="pwinput" class="sr-only">Mot de passe</label>
+                              <input type="password" id="pwinput" class="stroke" name="player-pw" placeholder="Mot de passe" maxlength="256" autocomplete="new-password" aria-label="Mot de passe">
+                              <label for="pwinput2" class="sr-only">Confirmer mot de passe</label>
+                              <input type="password" id="pwinput2" class="stroke" name="player-pw2" placeholder="Confirmer mot de passe" maxlength="256" autocomplete="new-password" aria-label="Confirmer mot de passe">
+                              <label for="emailinput" class="sr-only">Adresse email (facultatif)</label>
+                              <input type="email" id="emailinput" class="stroke" name="player-email" placeholder="Adresse email" maxlength="48" style="display:none" aria-label="Adresse email">
+                          </form>
+                          <div class="play">
+                              <span class="link">Créer</span>
+                              <img src="img/common/spinner2.gif">
+                          </div>
+                          <div class="validation-summary"></div>
+                          <div id="back-to-login">
+                              <span class="link">Déjà un compte ? Se connecter</span>
+                          </div>
+                    </article>
+                    <article id="loadcharacter">
+          	           <h1>
+          	               <span class="left-ornament"></span>
+          	               Nova Quest
+          	               <span class="right-ornament"></span>
+                          </h1>
+                          <div class="google-auth-btn" id="google-login-btn">
+                              <span class="google-icon"></span>
+                              <span class="google-text">Se connecter avec Google</span>
+                          </div>
+                          <div class="auth-divider"><span>OU</span></div>
+                          <form action="none" method="get" accept-charset="utf-8" onsubmit="return false;">
+                              <label for="loginnameinput" class="sr-only">Pseudo</label>
+                              <input type="text" id="loginnameinput" class="stroke" name="player-name" placeholder="Pseudo" maxlength="12" autofocus autocomplete="username" aria-label="Pseudo">
+                              <label for="loginpwinput" class="sr-only">Mot de passe</label>
+                              <input type="password" id="loginpwinput" class="stroke" name="player-loginpw" placeholder="Mot de passe" maxlength="256" autocomplete="current-password" aria-label="Mot de passe">
+                          </form>
+                          <div class="play">
+                              <span class="link">Jouer</span>
+                              <img src="img/common/spinner2.gif">
+                          </div>
+                          <div class="validation-summary"></div>
+                          <div id="create-new">
+                              <span class="link">Créer un compte</span>
+                          </div>
+                    </article>
+                    <article id="confirmation">
+          	           <h1>
+          	               <span class="left-ornament"></span>
+                            Êtes-vous prêt à forger un nouveau destin sur Nova Quest ?<br>
+                            Cliquez sur Continuer pour créer votre héros !<br><br>
+          	               <span class="right-ornament"></span>
+                          </h1>
+                          <div id="continue">
+                              <span class="link">Continuer</span>
+                          </div>
+                          <div id="cancel">
+                              <span class="link">Annuler</span>
+                          </div>
+                    </article>
+    	            <article id="credits">
+        	            <h1>
+         	               <span class="left-ornament"></span>
+         	               <span class="title">
+         	                   Développé par <a target="_blank" class="stroke clickable" href="https://github.com/Playerxr">UNIVERS NOVA STUDIO</a>
+         	               </span>
+         	               <span class="right-ornament"></span>
+                        </h1>
+                        <div id="authors">
+                            <div id="guillaume">
+                                <div class="avatar"></div>
+                                Éditeur Officiel
+                                <a class="stroke clickable" target="_blank" href="https://github.com/Playerxr">github.com/Playerxr</a>
+                            </div>
+                            <div id="franck">
+                                <div class="avatar"></div>
+                                Studio de Dev
+                                <a class="stroke clickable" target="_blank" href="https://github.com/Playerxr">UNIVERS NOVA STUDIO</a>
+                            </div>
+                        </div>
+                        <div id="seb">
+                            <span id="note"></span>
+                            Basé sur BrowserQuest (Little Workshop) &bull; Musiques par Terrel O'Brien, Joel Day, Dan Tilden &amp; Aaron Krogh
+                        </div>
+	                    <div id="close-credits">
+	                        <span>- cliquez n'importe où pour fermer -</span>
+                        </div>
+    	            </article>
+    	            <article id="about">
+        	            <h1>
+         	               <span class="left-ornament"></span>
+         	               <span class="title">
+         	                   Qu'est-ce que Nova Quest ?
+         	               </span>
+         	               <span class="right-ornament"></span>
+                        </h1>
+                        <p id="game-desc">
+                            Nova Quest est un jeu de rôle multijoueur (MMORPG) vous invitant à explorer un monde d'aventure directement depuis votre navigateur.
+                        </p>
+                        <div class="left">
+                            <div class="img"></div>
+                            <p>
+                                Propulsé par HTML5 et WebSockets, développé par UNIVERS NOVA STUDIO avec système de Chat en direct et d'Inventaire.
+                            </p>
+                            <span class="link">
+                                <span class="ext-link"></span>
+                                <a target="_blank" class="clickable" href="https://github.com/Playerxr">Découvrir l'éditeur</a> sur GitHub
+                            </span>
+                        </div>
+                        <div class="right">
+                            <div class="img"></div>
+                            <p>
+                                Nova Quest est jouable sur PC, tablette et mobile avec sauvegarde automatique de votre héros et de votre sac.
+                            </p>
+                            <span class="link">
+                                <span class="ext-link"></span>
+                                <a target="_blank" class="clickable" href="https://github.com/Playerxr">github.com/Playerxr</a>
+                            </span>
+                        </div>
+                      <div id="close-about">
+                          <span>- cliquez n'importe où pour fermer -</span>
+                        </div>
+                  </article>
+    	            <article id="death">
+                        <p>Vous êtes mort au combat...</p>
+    					<div id="respawn" class="button"></div>
+    	            </article>
+                    <article id="error">
+          	           <h1>
+          	               <span class="left-ornament"></span>
+          	               Votre navigateur ne peut pas lancer Nova Quest !
+          	               <span class="right-ornament"></span>
+                         </h1>
+                         <p>
+                             Désolé, votre navigateur ne supporte pas les WebSockets.<br>
+                             Pour jouer, veuillez utiliser une version récente de Chrome, Firefox, Edge ou Safari.
+                         </p>
+                    </article>
+                    <article id="legal">
+          	           <h1>
+          	               <span class="left-ornament"></span>
+          	               Confidentialité
+          	               <span class="right-ornament"></span>
+                         </h1>
+                         <p>
+                             Nova Quest (par UNIVERS NOVA STUDIO — Éditeur <a class="clickable" target="_blank" href="https://github.com/Playerxr">github.com/Playerxr</a>) sauvegarde votre personnage, votre inventaire et vos hauts faits pour vous permettre de reprendre votre aventure à tout moment.
+                         </p>
+ 	                    <div id="close-legal">
+ 	                        <span>- cliquez n'importe où pour fermer -</span>
+                         </div>
+                    </article>
+	            </div>
+	            <div class="parchment-right"></div>
+	        </section>
+	    </div>
+
+		<div id="container">
+		    <div id="canvasborder">
+		        <article id="instructions" class="clickable">
+		            <div class="close"></div>
+		            <h1>
+     	               <span class="left-ornament"></span>
+     	               Comment jouer
+     	               <span class="right-ornament"></span>
+	                </h1>
+	                <ul>
+	                   <li><span class="icon"></span><strong>Clavier (AZERTY &amp; QWERTY) :</strong> Déplacez-vous avec <strong>Z Q S D</strong>, <strong>W A S D</strong> ou les flèches. Appuyez sur <strong>ESPACE</strong> pour attaquer le monstre/Boss le plus proche.</li>
+	                   <li><span class="icon"></span><strong>Mobile / Tablette :</strong> Utilisez le <strong>Joystick directionnel</strong> en bas à gauche pour esquiver les Boss et les boutons <strong>⚔️ Attaquer</strong>, <strong>🎁 Ramasser/Coffre</strong> et <strong>🧪 Soin</strong> en bas à droite.</li>
+	                   <li><span class="icon"></span><strong>Sac à dos (Touche B) &amp; Hub (Touche I) :</strong> Équipez vos armes/armures depuis le Sac à dos, échangez au Marché et gérez votre Guilde.</li>
+	                </ul>
+	                    <p>- cliquez n'importe où pour fermer -</p>
+		        </article>
+
+                <!-- Bannière d'annonce serveur (Admin) -->
+                <div id="server-announcement" style="display:none;">
+                    <span class="ann-badge">📢 ANNONCE</span>
+                    <span id="server-announcement-text"></span>
+                </div>
+
+                <!-- HUB CENTRAL UNIQUE (Sac à dos, Marché, Guilde, Trophées, Admin) -->
+                <article id="nova-hub" class="clickable">
+                    <div class="close" id="hub-close-btn" title="Fermer"></div>
+                    <div id="hub-top-bar">
+                        <div id="hub-tabs">
+                            <button type="button" class="hub-tab active" data-tab="bag">🎒 Sac à dos</button>
+                            <button type="button" class="hub-tab" data-tab="market">🛒 Marché</button>
+                            <button type="button" class="hub-tab" data-tab="guild">🛡️ Guilde</button>
+                            <button type="button" class="hub-tab" data-tab="map">🗺️ Carte</button>
+                            <button type="button" class="hub-tab" data-tab="settings">⚙️ Réglages</button>
+                            <button type="button" class="hub-tab" data-tab="trophies">🏆 Trophées</button>
+                            <button type="button" class="hub-tab" id="hub-tab-admin" data-tab="admin" style="display:none;">⚡ Admin</button>
+                        </div>
+                        <div id="hub-gold-box" title="Votre solde d'Or">
+                            💰 <span id="hub-gold-amount">150</span> Or
+                        </div>
+                    </div>
+
+                    <div id="hub-notice" style="display:none;"></div>
+
+                    <!-- ONGLET 0 : SAC À DOS (INVENTAIRE & ÉQUIPEMENT) -->
+                    <div class="hub-panel active" id="hub-panel-bag">
+                        <div class="hub-columns">
+                            <div class="hub-col" style="flex:0.85;">
+                                <h3>⚔️ Équipement Actuel</h3>
+                                <div id="hub-equipped-list" class="hub-scroll-list"></div>
+                            </div>
+                            <div class="hub-col" style="flex:1.15;">
+                                <h3>🎒 Sac à dos (Cliquez sur Équiper pour porter un objet)</h3>
+                                <div id="hub-bag-slots-list" class="hub-scroll-list"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ONGLET 1 : MARCHÉ (Économie & HDV) -->
+                    <div class="hub-panel" id="hub-panel-market" style="display:none;">
+                        <div class="hub-columns">
+                            <div class="hub-col">
+                                <h3>🏪 Boutique du Royaume (Achat 1-clic)</h3>
+                                <div id="hub-shop-list" class="hub-scroll-list"></div>
+                            </div>
+                            <div class="hub-col">
+                                <h3>⚖️ Marché des Joueurs (HDV)</h3>
+                                <div class="hub-sell-box">
+                                    <label for="hub-sell-price" class="sr-only">Prix de vente en or</label>
+                                    <input type="number" id="hub-sell-price" min="1" max="999999" value="100" placeholder="Prix (Or)" aria-label="Prix de vente en or">
+                                    <button type="button" id="hub-sell-weapon-btn" class="hub-action-btn">Vendre mon Arme</button>
+                                    <button type="button" id="hub-sell-armor-btn" class="hub-action-btn">Vendre mon Armure</button>
+                                </div>
+                                <div id="hub-market-list" class="hub-scroll-list"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ONGLET 2 : GUILDE 3.0 (Banque, Quêtes Collectives, Salon Privé, Boss de Guilde) -->
+                    <div class="hub-panel" id="hub-panel-guild" style="display:none;">
+                        <div id="hub-no-guild-view">
+                            <div class="hub-columns">
+                                <div class="hub-col">
+                                    <h3>🛡️ Fonder une Guilde (100 Or)</h3>
+                                    <div class="hub-form-group">
+                                        <label for="hub-guild-tag">TAG (2 à 4 lettres max) :</label>
+                                        <input type="text" id="hub-guild-tag" maxlength="4" placeholder="Ex: NOVA" aria-label="Tag de la guilde">
+                                    </div>
+                                    <div class="hub-form-group">
+                                        <label for="hub-guild-name">Nom de la Guilde :</label>
+                                        <input type="text" id="hub-guild-name" maxlength="20" placeholder="Ex: Chevaliers Nova" aria-label="Nom de la guilde">
+                                    </div>
+                                    <button type="button" id="hub-guild-create-btn" class="hub-action-btn gold">Créer la Guilde (100 Or)</button>
+                                </div>
+                                <div class="hub-col">
+                                    <h3>📩 Invitations de Guilde reçues</h3>
+                                    <div id="hub-guild-invites-list" class="hub-scroll-list"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="hub-has-guild-view" style="display:none;">
+                            <div class="hub-guild-header">
+                                <div>
+                                    <span class="hub-guild-badge" id="hub-my-guild-tag">[TAG]</span>
+                                    <strong id="hub-my-guild-name">Nom de Guilde</strong>
+                                    <span id="hub-my-guild-leader" class="hub-subtext"></span>
+                                </div>
+                                <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                                    <button type="button" id="hub-guild-buy-hall-btn" class="hub-action-btn gold" style="display:none;">🏰 Acheter le Salon (Coût : 50 000 Or)</button>
+                                    <button type="button" id="hub-guild-tp-hall-btn" class="hub-action-btn gold" style="display:none;">✨ Se téléporter au Salon</button>
+                                    <button type="button" id="hub-guild-leave-hall-btn" class="hub-action-btn" style="display:none;">🚪 Quitter le Salon</button>
+                                    <button type="button" id="hub-guild-summon-boss-btn" class="hub-action-btn danger" style="display:none;">👹 Invoquer Boss de Guilde (5 000 Or)</button>
+                                    <button type="button" id="hub-guild-spawn-chest-btn" class="hub-action-btn gold" style="display:none;">🎁 Poser un Coffre (1 000 Or)</button>
+                                    <button type="button" id="hub-guild-leave-btn" class="hub-action-btn danger">Quitter</button>
+                                </div>
+                            </div>
+                            <div class="hub-guild-bank-bar">
+                                <div class="hub-bank-box">
+                                    <span>🏦 Banque de Guilde : <strong id="hub-guild-bank-gold">0</strong> Or</span>
+                                    <label for="hub-guild-deposit-amount" class="sr-only">Montant d'or à déposer</label>
+                                    <input type="number" id="hub-guild-deposit-amount" min="10" max="999999" value="250" style="width:70px;" aria-label="Montant d'or à déposer">
+                                    <button type="button" id="hub-guild-deposit-btn" class="hub-action-btn gold">💰 Déposer Or</button>
+                                </div>
+                                <div class="hub-quest-box">
+                                    <span id="hub-guild-quest-label">⚔️ Quête Collective Niv. 1 : 0 / 1000 monstres (+15 000 Or Banque)</span>
+                                    <div class="hub-quest-progress-bg"><div id="hub-guild-quest-bar" class="hub-quest-progress-fill" style="width:0%;"></div></div>
+                                </div>
+                            </div>
+                            <div class="hub-columns">
+                                <div class="hub-col">
+                                    <h3>👥 Membres de la Guilde</h3>
+                                    <div id="hub-guild-members-list" class="hub-scroll-list"></div>
+                                </div>
+                                <div class="hub-col">
+                                    <h3>➕ Inviter un joueur en ligne</h3>
+                                    <div class="hub-invite-row">
+                                        <select id="hub-guild-invite-select"></select>
+                                        <button type="button" id="hub-guild-invite-btn" class="hub-action-btn">Inviter</button>
+                                    </div>
+                                    <p class="hub-hint">💡 Astuce : utilisez le bouton <strong>[Global / Guilde]</strong> à côté de la barre de chat pour parler à votre guilde, et débloquez le <strong>Salon Privé</strong> pour affronter des Boss de Guilde entre membres !</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ONGLET CARTE & VOYAGES (Exploration et Téléportation Instantanée) -->
+                    <div class="hub-panel" id="hub-panel-map" style="display:none;">
+                        <div class="hub-map-header">
+                            <h3>🗺️ Carte du Monde & Téléportation Instantanée</h3>
+                            <p class="hub-hint">Cliquez sur une région pour vous y téléporter immédiatement et explorer le monde.</p>
+                        </div>
+                        <div class="hub-map-grid">
+                            <div class="hub-map-card" data-dest="village">
+                                <div class="hub-map-card-head">
+                                    <span class="hub-map-icon">🏡</span>
+                                    <div>
+                                        <strong>Village de Départ</strong>
+                                        <div class="hub-map-badge safe">Zone Sûre (Niv. 1)</div>
+                                    </div>
+                                </div>
+                                <p>Centre de rassemblement, PNJ et point de réapparition initial.</p>
+                                <button type="button" class="hub-action-btn gold hub-map-tp-btn" data-dest="village">📍 Aller au Village (43, 210)</button>
+                            </div>
+
+                            <div class="hub-map-card" data-dest="beach">
+                                <div class="hub-map-card-head">
+                                    <span class="hub-map-icon">🏖️</span>
+                                    <div>
+                                        <strong>Plage du Sud</strong>
+                                        <div class="hub-map-badge easy">Facile (Niv. 1-2)</div>
+                                    </div>
+                                </div>
+                                <p>Rive bordée de crabes et de poissons, idéale pour débuter.</p>
+                                <button type="button" class="hub-action-btn gold hub-map-tp-btn" data-dest="beach">📍 Aller à la Plage (110, 280)</button>
+                            </div>
+
+                            <div class="hub-map-card" data-dest="forest">
+                                <div class="hub-map-card-head">
+                                    <span class="hub-map-icon">🌲</span>
+                                    <div>
+                                        <strong>Grande Forêt</strong>
+                                        <div class="hub-map-badge medium">Moyen (Niv. 2-3)</div>
+                                    </div>
+                                </div>
+                                <p>Forêt dense peuplée de gobelins éclaireurs et de meutes de loups.</p>
+                                <button type="button" class="hub-action-btn gold hub-map-tp-btn" data-dest="forest">📍 Aller en Forêt (65, 160)</button>
+                            </div>
+
+                            <div class="hub-map-card" data-dest="desert">
+                                <div class="hub-map-card-head">
+                                    <span class="hub-map-icon">🏜️</span>
+                                    <div>
+                                        <strong>Désert Aride</strong>
+                                        <div class="hub-map-badge hard">Difficile (Niv. 3-4)</div>
+                                    </div>
+                                </div>
+                                <p>Dunes brûlantes abritant des scorpions, serpents et guerriers ogres.</p>
+                                <button type="button" class="hub-action-btn gold hub-map-tp-btn" data-dest="desert">📍 Aller au Désert (145, 175)</button>
+                            </div>
+
+                            <div class="hub-map-card" data-dest="castle">
+                                <div class="hub-map-card-head">
+                                    <span class="hub-map-icon">🏰</span>
+                                    <div>
+                                        <strong>Château Royal</strong>
+                                        <div class="hub-map-badge medium">Zone Protégée</div>
+                                    </div>
+                                </div>
+                                <p>La citadelle royale avec ses salles d'armes et ses balcons royaux.</p>
+                                <button type="button" class="hub-action-btn gold hub-map-tp-btn" data-dest="castle">📍 Aller au Château (155, 275)</button>
+                            </div>
+
+                            <div class="hub-map-card" data-dest="graveyard">
+                                <div class="hub-map-card-head">
+                                    <span class="hub-map-icon">🪦</span>
+                                    <div>
+                                        <strong>Cimetière Maudit</strong>
+                                        <div class="hub-map-badge hard">Périlleux (Niv. 4-5)</div>
+                                    </div>
+                                </div>
+                                <p>Terres souillées d'ossements et de spectres. Repaire du Roi Squelette.</p>
+                                <button type="button" class="hub-action-btn gold hub-map-tp-btn" data-dest="graveyard">📍 Aller au Cimetière (25, 45)</button>
+                            </div>
+
+                            <div class="hub-map-card" data-dest="lavacave">
+                                <div class="hub-map-card-head">
+                                    <span class="hub-map-icon">🌋</span>
+                                    <div>
+                                        <strong>Caverne de Lave</strong>
+                                        <div class="hub-map-badge extreme">Extrême (Niv. 5-6)</div>
+                                    </div>
+                                </div>
+                                <p>Profondeurs volcaniques où rôdent les seigneurs élémentaires du feu.</p>
+                                <button type="button" class="hub-action-btn gold hub-map-tp-btn" data-dest="lavacave">📍 Aller à la Caverne (150, 80)</button>
+                            </div>
+
+                            <div class="hub-map-card" data-dest="bossroom">
+                                <div class="hub-map-card-head">
+                                    <span class="hub-map-icon">💀</span>
+                                    <div>
+                                        <strong>Antre des Boss Mondiaux</strong>
+                                        <div class="hub-map-badge raid">Raid / Élite</div>
+                                    </div>
+                                </div>
+                                <p>Zone de combat majeur où apparaissent les Boss mondiaux légendaires.</p>
+                                <button type="button" class="hub-action-btn gold hub-map-tp-btn" data-dest="bossroom">📍 Aller aux Boss (45, 105)</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ONGLET RÉGLAGES (Taille Joystick, Transparence, Clic Tactile, etc.) -->
+                    <div class="hub-panel" id="hub-panel-settings" style="display:none;">
+                        <h3>⚙️ Paramètres & Personnalisation des Contrôles</h3>
+                        <div class="hub-settings-container">
+                            <div class="hub-setting-row">
+                                <div class="hub-setting-info">
+                                    <strong>🕹️ Taille du Joystick & Boutons de Combat</strong>
+                                    <p>Agrandissez ou réduisez la taille des commandes virtuelles tactiles à votre guise.</p>
+                                </div>
+                                <div class="hub-setting-control">
+                                    <label for="setting-pad-scale" class="sr-only">Taille du Joystick</label>
+                                    <input type="range" id="setting-pad-scale" min="80" max="220" step="5" value="130" aria-label="Taille du Joystick">
+                                    <span id="setting-pad-scale-val" class="hub-setting-val">130%</span>
+                                    <div class="hub-setting-presets">
+                                        <button type="button" class="hub-preset-btn" data-scale="100">100%</button>
+                                        <button type="button" class="hub-preset-btn" data-scale="130">130%</button>
+                                        <button type="button" class="hub-preset-btn" data-scale="160">160%</button>
+                                        <button type="button" class="hub-preset-btn" data-scale="190">190%</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="hub-setting-row">
+                                <div class="hub-setting-info">
+                                    <strong>👁️ Opacité des Commandes Tactiles</strong>
+                                    <p>Réglez la transparence des boutons pour plus ou moins de visibilité.</p>
+                                </div>
+                                <div class="hub-setting-control">
+                                    <label for="setting-pad-opacity" class="sr-only">Opacité des commandes</label>
+                                    <input type="range" id="setting-pad-opacity" min="30" max="100" step="5" value="95" aria-label="Opacité des commandes tactiles">
+                                    <span id="setting-pad-opacity-val" class="hub-setting-val">95%</span>
+                                </div>
+                            </div>
+
+                            <div class="hub-setting-row">
+                                <div class="hub-setting-info">
+                                    <strong>🎯 Désactiver le clic au sol sur mobile (Pad 100%)</strong>
+                                    <p>Empêche le personnage de bouger quand vous touchez l'écran en dehors des boutons.</p>
+                                </div>
+                                <div class="hub-setting-control">
+                                    <label class="hub-switch">
+                                        <input type="checkbox" id="setting-disable-touch-move" checked aria-label="Désactiver le clic au sol sur mobile">
+                                        <span class="hub-slider round"></span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="hub-setting-actions">
+                                <button type="button" id="setting-pad-reset-btn" class="hub-action-btn">🔄 Réinitialiser les réglages</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ONGLET 3 : PANEL ADMIN (Caché si is_admin != 1) -->
+                    <div class="hub-panel" id="hub-panel-admin" style="display:none;">
+                        <div class="hub-admin-announce-bar">
+                            <label for="hub-admin-announce-input" class="sr-only">Message d'annonce serveur</label>
+                            <input type="text" id="hub-admin-announce-input" maxlength="100" placeholder="Message d'annonce serveur pour tous les joueurs..." aria-label="Message d'annonce serveur">
+                            <button type="button" id="hub-admin-announce-btn" class="hub-action-btn gold">📢 Envoyer l'annonce</button>
+                        </div>
+                        <div class="hub-columns">
+                            <div class="hub-col">
+                                <h3>🟢 Joueurs en ligne (Actions rapides)</h3>
+                                <div id="hub-admin-players-list" class="hub-scroll-list"></div>
+                            </div>
+                            <div class="hub-col">
+                                <h3>👹 Spawner de Monstres en 1 clic</h3>
+                                <div id="hub-admin-spawner-grid" class="hub-spawner-grid"></div>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+		        <article id="achievements" class="page1 clickable">
+		            <div class="close"></div>
+		            <div id="achievements-wrapper">
+		                <div id="lists">
+        		        </div>
+    		        </div>
+    		        <div id="achievements-count" class="stroke">
+    		            Accomplis
+    		            <div>
+    		                <span id="unlocked-achievements">0</span>
+    		                /
+    		                <span id="total-achievements"></span>
+    		            </div>
+                    Fermer
+    		        </div>
+		            <nav class="clickable">
+		                <div id="previous"></div>
+		                <div id="next"></div>
+		            </nav>
+		        </article>
+    			<div id="canvas">
+    				<canvas id="background"></canvas>
+    				<canvas id="entities"></canvas>
+    				<canvas id="foreground" class="clickable"></canvas>
+    			</div>
+    			<div id="bubbles"></div>
+                <!-- HUD des 3 Vies (Style Arcade / Mario) en haut de l'écran -->
+                <div id="nova-lives-hud" title="Vos Vies (à 0 Vie : Game Over et retour au village)">
+                    <span class="lives-label">VIES</span>
+                    <span id="nova-lives-icons">❤️❤️❤️</span>
+                </div>
+     			<div id="expbar" title="Barre d'expérience"></div>
+     			<div id="textWindow"></div>
+    			<div id="inspector">
+                    <div class="headshot"><div> </div></div>
+                    <div class="details">
+                        <div class="name"></div>
+                        <div class="level"></div>
+                        <div class="health"></div>
+                    </div>
+                </div>
+
+                <!-- Contrôles Tactiles & Combat Mobile (Joystick + Boutons d'Action Boss) -->
+                <div id="mobile-controls" class="clickable">
+                    <div id="mobile-joystick-zone">
+                        <div class="dpad-cross">
+                            <button type="button" class="dpad-btn dpad-up" data-dir="up" title="Haut (Z)">▲</button>
+                            <button type="button" class="dpad-btn dpad-left" data-dir="left" title="Gauche (Q)">◀</button>
+                            <div id="joystick-stick" class="dpad-center">🕹️</div>
+                            <button type="button" class="dpad-btn dpad-right" data-dir="right" title="Droite (D)">▶</button>
+                            <button type="button" class="dpad-btn dpad-down" data-dir="down" title="Bas (S)">▼</button>
+                        </div>
+                    </div>
+                    <div id="mobile-combat-zone">
+                        <div class="mobile-sub-btns">
+                            <button type="button" id="btn-mobile-heal" class="mob-act-btn heal" title="Boire une potion / manger">
+                                <span class="mob-ico">🧪</span>
+                                <span class="mob-lbl">SOIN</span>
+                            </button>
+                            <button type="button" id="btn-mobile-loot" class="mob-act-btn loot" title="Ouvrir le coffre ou ramasser l'objet le plus proche">
+                                <span class="mob-ico">🎁</span>
+                                <span class="mob-lbl">COFFRE / LOOT</span>
+                            </button>
+                        </div>
+                        <button type="button" id="btn-mobile-attack" class="mob-act-btn attack" title="Attaquer le Boss / monstre le plus proche">
+                            <span class="mob-ico">⚔️</span>
+                            <span class="mob-lbl">ATTAQUER</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Barre d'Inventaire (Sac à dos 6 emplacements) Nova Quest -->
+                <div id="nova-inventory" class="clickable">
+                    <div id="nova-inventory-header">
+                        <span>🎒 Sac à dos</span>
+                    </div>
+                    <div id="nova-inventory-slots">
+                        <div id="inv-slot-0" class="inv-slot empty" data-slot="0" title="Emplacement 1 (Vide)">
+                            <span class="inv-key">1</span>
+                            <div class="inv-icon"></div>
+                            <span class="inv-count"></span>
+                            <span class="inv-drop-btn" title="Jeter au sol">&times;</span>
+                        </div>
+                        <div id="inv-slot-1" class="inv-slot empty" data-slot="1" title="Emplacement 2 (Vide)">
+                            <span class="inv-key">2</span>
+                            <div class="inv-icon"></div>
+                            <span class="inv-count"></span>
+                            <span class="inv-drop-btn" title="Jeter au sol">&times;</span>
+                        </div>
+                        <div id="inv-slot-2" class="inv-slot empty" data-slot="2" title="Emplacement 3 (Vide)">
+                            <span class="inv-key">3</span>
+                            <div class="inv-icon"></div>
+                            <span class="inv-count"></span>
+                            <span class="inv-drop-btn" title="Jeter au sol">&times;</span>
+                        </div>
+                        <div id="inv-slot-3" class="inv-slot empty" data-slot="3" title="Emplacement 4 (Vide)">
+                            <span class="inv-key">4</span>
+                            <div class="inv-icon"></div>
+                            <span class="inv-count"></span>
+                            <span class="inv-drop-btn" title="Jeter au sol">&times;</span>
+                        </div>
+                        <div id="inv-slot-4" class="inv-slot empty" data-slot="4" title="Emplacement 5 (Vide)">
+                            <span class="inv-key">5</span>
+                            <div class="inv-icon"></div>
+                            <span class="inv-count"></span>
+                            <span class="inv-drop-btn" title="Jeter au sol">&times;</span>
+                        </div>
+                        <div id="inv-slot-5" class="inv-slot empty" data-slot="5" title="Emplacement 6 (Vide)">
+                            <span class="inv-key">6</span>
+                            <div class="inv-icon"></div>
+                            <span class="inv-count"></span>
+                            <span class="inv-drop-btn" title="Jeter au sol">&times;</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="dropDialog">
+                    <div id="dropTitle">Quantité à jeter :</div>
+                    <div align="center">
+                        <label for="dropCount" class="sr-only">Quantité à jeter</label>
+                        <input type="text" id="dropCount" size="6" maxlength="6" aria-label="Quantité à jeter">
+                        <span id="dropAccept">&nbsp;Valider&nbsp;</span>
+                        <span id="dropCancel">&nbsp;Annuler&nbsp;</span>
+                    </div>
+                </div>
+ 			    <div id="achievement-notification">
+    			    <div class="coin">
+    			        <div id="coinsparks"></div>
+    			    </div>
+    			    <div id="achievement-info">
+        			    <div class="title">Haut Fait Débloqué !</div>
+        			    <div class="name"></div>
+    			    </div>
+    			</div>
+    			<div id="bar-container">
+					<div id="healthbar">
+					</div>
+					<div id="hitpoints">
+					</div>
+					<div id="weapon" title="Arme équipée"></div>
+					<div id="armor" title="Armure équipée"></div>
+                    <div id="inventory-toggle" class="clickable active" title="Ouvrir / Fermer le Sac à dos (Touche B)">🎒 Sac</div>
+                    <div id="touch-controls-toggle" class="clickable" title="Afficher / Masquer le Joystick et les boutons de combat">🕹️ Pad</div>
+                    <div id="pad-zoom-minus" class="clickable pad-quick-zoom" title="Réduire la taille du Joystick (-15%)">➖</div>
+                    <div id="pad-quick-size" class="pad-size-label" title="Taille actuelle du Joystick">130%</div>
+                    <div id="pad-zoom-plus" class="clickable pad-quick-zoom" title="Agrandir la taille du Joystick (+15%)">➕</div>
+					<div id="notifications">
+					    <div>
+					       <span id="message1"></span>
+					       <span id="message2"></span>
+					    </div>
+					</div>
+                    <div id="playercount" class="clickable" title="Joueurs connectés">
+                        <span class="count">0</span> <span>joueurs</span>
+                    </div>
+                    <div id="barbuttons">
+                        <div id="chatbutton" class="barbutton clickable" title="Bulle de discussion rapide (Entrée)"></div>
+                        <div id="achievementsbutton" class="barbutton clickable" title="Hub Central : Marché, Guilde, Trophées & Admin (Touche I)"></div>
+                        <div id="helpbutton" class="barbutton clickable" title="Aide & Commandes du Sac (Touche H)"></div>
+                        <div id="mutebutton" class="barbutton clickable active" title="Activer / Couper le son (Touche M)"></div>
+                    </div>
+    			</div>
+				<div id="chatbox">
+				    <form action="none" method="get" accept-charset="utf-8" onsubmit="return false;">
+                        <button type="button" id="chat-mode-toggle" class="clickable" title="Basculer entre Chat Global et Chat de Guilde">[Global]</button>
+                        <label for="chatinput" class="sr-only">Message du chat</label>
+					    <input id="chatinput" class="gp" type="text" maxlength="60" placeholder="Message Global (Entrée pour envoyer)..." autocomplete="off" aria-label="Message du chat">
+                        <button type="button" id="chat-send-btn" class="clickable" title="Envoyer le message">Envoyer</button>
+				    </form>
+				</div>
+                <div id="population">
+                    <div id="instance-population" class="">
+                        <span>0</span> <span>joueurs</span> dans ce monde
+                    </div>
+                    <div id="guild-population" class="">
+						<span>0</span> <span>joueurs</span> dans «&nbsp;<span id="guild-name"></span>&nbsp;»
+					</div>
+                    <div id="world-population" class="">
+                        <span>0</span> <span>joueurs</span> au total
+                    </div>
+                </div>
+		    </div>
+		</div>
+		<footer>
+		    <div id="sharing" class="clickable">
+		      <strong>Nova Quest</strong> &bull; Dev : <strong>UNIVERS NOVA STUDIO</strong>
+		    </div>
+		    <div id="privacy-link" class="clickable">
+		      <span class="dash">&ndash;</span> <span id="toggle-legal">Confidentialité</span>
+		    </div>
+		    <div id="legal-link" class="clickable">
+		      <span class="dash">&ndash;</span> Éditeur : <a class="clickable" target="_blank" href="https://github.com/Playerxr">github.com/Playerxr</a>
+		    </div>
+		    <div id="credits-link" class="clickable">
+		      <span class="dash">&ndash;</span> <span id="toggle-credits">Crédits</span>
+		    </div>
+		</footer>
+
+		<ul id="page-tmpl" class="clickable" style="display:none">
+        </ul>
+        <ul>
+            <li id="achievement-tmpl" style="display:none">
+                <div class="coin"></div>
+                <span class="achievement-name">???</span>
+                <span class="achievement-description">???</span>
+                <div class="achievement-sharing">
+                  <a href="https://github.com/Playerxr" class="twitter"></a>
+                </div>
+            </li>
+        </ul>
+
+        <img src="img/common/thingy.png" alt="" class="preload">
+
+        <div id="resize-check"></div>
+
+        <script type="text/javascript">
+            var ctx = document.querySelector('canvas').getContext('2d'),
+                parchment = document.getElementById("parchment");
+
+            if(!Detect.supportsWebSocket()) {
+                parchment.className = "error";
+            }
+
+            if(ctx.mozImageSmoothingEnabled === undefined) {
+                document.querySelector('body').className += ' upscaled';
+            }
+
+            parchment.className = "loadcharacter";
+        </script>
+
+        <script src="js/lib/log.js"></script>
+        <script>
+                var require = { waitSeconds: 0 };
+        </script>
+        <script data-main="js/home" src="js/lib/require-jquery.js"></script>
+	</body>
+</html>

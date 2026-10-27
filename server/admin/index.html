@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nova Quest — Administration (UNIVERS NOVA STUDIO)</title>
+    <link rel="icon" type="image/png" href="/img/common/favicon.png">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #0f1218;
+            --bg-card: #181d27;
+            --bg-hover: #222938;
+            --border: #2c3548;
+            --gold: #d4af37;
+            --gold-light: #f3e5ab;
+            --accent: #3b82f6;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-base);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        /* Header */
+        header {
+            background: linear-gradient(180deg, #181d27 0%, #121620 100%);
+            border-bottom: 2px solid var(--border);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .header-logo {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: #2a2015;
+            border: 2px solid var(--gold);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        .header-title h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 20px;
+            letter-spacing: 0.5px;
+            color: var(--gold-light);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .header-title p {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.15s ease;
+            user-select: none;
+        }
+        .btn-gold {
+            background: linear-gradient(180deg, #d4af37 0%, #b89328 100%);
+            color: #1a1202;
+            border-color: #f3e5ab;
+        }
+        .btn-gold:hover { background: #e5bd3b; transform: translateY(-1px); }
+        .btn-secondary {
+            background: var(--bg-hover);
+            color: var(--text-main);
+            border-color: var(--border);
+        }
+        .btn-secondary:hover { background: #2d374a; }
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--danger);
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+        .btn-danger:hover { background: rgba(239, 68, 68, 0.3); }
+        .btn-success {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+            border-color: rgba(16, 185, 129, 0.4);
+        }
+        .btn-success:hover { background: rgba(16, 185, 129, 0.35); }
+        .btn-sm {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+        /* Stat Cards */
+        .stats-bar {
+            padding: 16px 24px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 14px;
+        }
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .stat-card .label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .stat-card .value {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-top: 4px;
+        }
+        .stat-card .icon {
+            font-size: 26px;
+            opacity: 0.8;
+        }
+        /* Filter Controls */
+        .controls-bar {
+            padding: 0 24px 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .search-box {
+            position: relative;
+            flex: 1;
+            max-width: 380px;
+        }
+        .search-box input {
+            width: 100%;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 9px 12px 9px 34px;
+            color: var(--text-main);
+            font-size: 13px;
+            outline: none;
+        }
+        .search-box input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+        .search-box .icon {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+        .filter-tabs {
+            display: flex;
+            gap: 6px;
+            background: var(--bg-card);
+            padding: 4px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+        .filter-tab {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: all 0.15s;
+        }
+        .filter-tab.active {
+            background: var(--bg-hover);
+            color: var(--gold-light);
+        }
+        /* Table Container */
+        .table-wrap {
+            padding: 0 24px 24px 24px;
+            flex: 1;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            font-size: 13px;
+        }
+        thead th {
+            background: #141822;
+            color: var(--gold-light);
+            font-family: 'Cinzel', serif;
+            font-size: 12px;
+            font-weight: 700;
+            text-align: left;
+            padding: 12px 14px;
+            border-bottom: 2px solid var(--border);
+            white-space: nowrap;
+        }
+        tbody tr {
+            transition: background 0.15s ease;
+        }
+        tbody tr:nth-child(even) { background: rgba(255,255,255,0.015); }
+        tbody tr:hover { background: var(--bg-hover); }
+        tbody tr.modified {
+            background: rgba(245, 158, 11, 0.1) !important;
+            border-left: 3px solid var(--warning);
+        }
+        tbody tr.saved-success {
+            background: rgba(16, 185, 129, 0.15) !important;
+        }
+        tbody td {
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+        /* Inputs in table */
+        .cell-input {
+            background: #11141c;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: #fff;
+            padding: 6px 8px;
+            font-size: 13px;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+        .cell-input:focus {
+            border-color: var(--gold);
+            box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2);
+        }
+        .cell-input-number {
+            width: 85px;
+            text-align: right;
+        }
+        .cell-select {
+            background: #11141c;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: #fff;
+            padding: 6px 8px;
+            font-size: 12px;
+            outline: none;
+            cursor: pointer;
+        }
+        .cell-select:focus { border-color: var(--gold); }
+        /* Toggles */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 22px;
+        }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #374151;
+            transition: .2s;
+            border-radius: 22px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .2s;
+            border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--gold); }
+        input.danger-switch:checked + .slider { background-color: var(--danger); }
+        input:checked + .slider:before { transform: translateX(22px); }
+        /* Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .badge-online {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        .badge-offline {
+            background: rgba(156, 163, 175, 0.15);
+            color: #9ca3af;
+        }
+        .badge-admin {
+            background: rgba(212, 175, 55, 0.2);
+            color: #fbbf24;
+            border: 1px solid rgba(212, 175, 55, 0.4);
+        }
+        .badge-banned {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+        }
+        .dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .dot-green { background: #10b981; box-shadow: 0 0 6px #10b981; }
+        .dot-gray { background: #6b7280; }
+        /* Modal for Auth */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal {
+            background: var(--bg-card);
+            border: 2px solid var(--gold);
+            border-radius: 12px;
+            padding: 30px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            text-align: center;
+        }
+        .modal h2 {
+            font-family: 'Cinzel', serif;
+            color: var(--gold-light);
+            font-size: 22px;
+            margin-bottom: 8px;
+        }
+        .modal p {
+            color: var(--text-muted);
+            font-size: 13px;
+            margin-bottom: 20px;
+        }
+        .modal input {
+            width: 100%;
+            background: #11141c;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px;
+            color: #fff;
+            font-size: 15px;
+            margin-bottom: 16px;
+            text-align: center;
+            outline: none;
+        }
+        .modal input:focus { border-color: var(--gold); }
+        /* Notifications Toast */
+        #toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 2000;
+        }
+        .toast {
+            background: #1e2638;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 18px;
+            color: var(--text-main);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            animation: slideIn 0.2s ease;
+        }
+        .toast.success { border-color: var(--success); }
+        .toast.error { border-color: var(--danger); }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Auth Modal -->
+    <div id="auth-modal" class="modal-overlay">
+        <div class="modal">
+            <div style="font-size: 40px; margin-bottom: 10px;">🔐</div>
+            <h2>Accès Administrateur</h2>
+            <p>Nova Quest — UNIVERS NOVA STUDIO<br>Entrez votre mot de passe administrateur pour débloquer le tableau de bord.</p>
+            <form id="auth-form" onsubmit="handleAuth(event)">
+                <input type="password" id="admin-pass-input" placeholder="Mot de passe admin" autofocus autocomplete="current-password" value="nova-admin-2026">
+                <button type="submit" class="btn btn-gold" style="width: 100%; justify-content: center; padding: 12px;">Accéder au Tableau</button>
+            </form>
+            <div id="auth-error" style="color: var(--danger); font-size: 12px; margin-top: 10px; display: none;">Mot de passe incorrect.</div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header>
+        <div class="header-brand">
+            <div class="header-logo">⚔️</div>
+            <div class="header-title">
+                <h1>Nova Quest <span>Administration</span></h1>
+                <p>Éditeur : github.com/Playerxr &bull; Données synchronisées SQLite &bull; Firestore &bull; Temps réel</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <a href="/" target="_blank" class="btn btn-secondary">🎮 Ouvrir le Jeu</a>
+            <button class="btn btn-secondary" onclick="loadPlayers(true)">🔄 Actualiser</button>
+            <button class="btn btn-gold" onclick="saveAllModified()">💾 Tout Enregistrer</button>
+            <button class="btn btn-danger btn-sm" onclick="logout()">Déconnexion</button>
+        </div>
+    </header>
+
+    <!-- Stats Bar -->
+    <div class="stats-bar">
+        <div class="stat-card">
+            <div>
+                <div class="label">Total Joueurs</div>
+                <div class="value" id="stat-total-players">-</div>
+            </div>
+            <div class="icon">👥</div>
+        </div>
+        <div class="stat-card">
+            <div>
+                <div class="label">Joueurs en Ligne</div>
+                <div class="value" id="stat-online-players" style="color: #34d399;">-</div>
+            </div>
+            <div class="icon">🟢</div>
+        </div>
+        <div class="stat-card">
+            <div>
+                <div class="label">Administrateurs</div>
+                <div class="value" id="stat-admins" style="color: #fbbf24;">-</div>
+            </div>
+            <div class="icon">👑</div>
+        </div>
+        <div class="stat-card">
+            <div>
+                <div class="label">Comptes Bannis</div>
+                <div class="value" id="stat-banned" style="color: #f87171;">-</div>
+            </div>
+            <div class="icon">🚫</div>
+        </div>
+        <div class="stat-card">
+            <div>
+                <div class="label">Or en Circulation</div>
+                <div class="value" id="stat-total-gold" style="color: #f3e5ab;">-</div>
+            </div>
+            <div class="icon">🪙</div>
+        </div>
+    </div>
+
+    <!-- Controls Bar -->
+    <div class="controls-bar">
+        <div class="search-box">
+            <span class="icon">🔍</span>
+            <input type="text" id="search-input" placeholder="Rechercher par nom de héros..." oninput="filterTable()">
+        </div>
+        <div class="filter-tabs">
+            <div class="filter-tab active" data-filter="all" onclick="setFilter('all')">Tous (<span id="count-all">0</span>)</div>
+            <div class="filter-tab" data-filter="online" onclick="setFilter('online')">🟢 En Ligne (<span id="count-online">0</span>)</div>
+            <div class="filter-tab" data-filter="admin" onclick="setFilter('admin')">👑 Admins (<span id="count-admin">0</span>)</div>
+            <div class="filter-tab" data-filter="banned" onclick="setFilter('banned')">🚫 Bannis (<span id="count-banned">0</span>)</div>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 40px;">#</th>
+                    <th>Héros (Pseudo)</th>
+                    <th>Connexion</th>
+                    <th style="text-align: center;">👑 Admin</th>
+                    <th style="text-align: center;">🚫 Banni</th>
+                    <th>🪙 Or</th>
+                    <th>❤️ Vies</th>
+                    <th>⚔️ Arme</th>
+                    <th>🛡️ Armure</th>
+                    <th style="text-align: center;">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="players-tbody">
+                <tr>
+                    <td colspan="10" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                        Chargement des données du royaume...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script>
+        const WEAPONS = [
+            { id: 'sword1', name: 'Épée en Bois (Niv. 1)' },
+            { id: 'sword2', name: 'Épée en Fer (Niv. 2)' },
+            { id: 'axe', name: 'Hache de Guerre' },
+            { id: 'bow', name: 'Arc de Chasseur' },
+            { id: 'morningstar', name: 'Étoile du Matin' },
+            { id: 'bluesword', name: 'Épée Saphir' },
+            { id: 'redsword', name: 'Épée Rubis Flamboyante' },
+            { id: 'goldenbow', name: 'Arc Royal Légendaire' },
+            { id: 'goldensword', name: 'Épée d\'Or Légendaire' }
+        ];
+
+        const ARMORS = [
+            { id: 'clotharmor', name: 'Tunique en Tissu (Niv. 1)' },
+            { id: 'leatherarmor', name: 'Armure de Cuir' },
+            { id: 'mailarmor', name: 'Cotte de Mailles' },
+            { id: 'platearmor', name: 'Armure de Plaques' },
+            { id: 'redarmor', name: 'Armure Pourpre de Rubis' },
+            { id: 'goldenarmor', name: 'Armure d\'Or Légendaire' }
+        ];
+
+        let allPlayers = [];
+        let currentFilter = 'all';
+        let modifiedRows = new Set();
+
+        function getAuthToken() {
+            return sessionStorage.getItem('nova_admin_token') || localStorage.getItem('nova_admin_token') || '';
+        }
+
+        function setAuthToken(token) {
+            sessionStorage.setItem('nova_admin_token', token);
+            localStorage.setItem('nova_admin_token', token);
+        }
+
+        function logout() {
+            sessionStorage.removeItem('nova_admin_token');
+            localStorage.removeItem('nova_admin_token');
+            document.getElementById('auth-modal').style.display = 'flex';
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast ' + type;
+            toast.innerHTML = (type === 'success' ? '✔' : '⚠️') + ' ' + message;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        async function handleAuth(e) {
+            e.preventDefault();
+            const pass = document.getElementById('admin-pass-input').value.trim();
+            setAuthToken(pass);
+            const ok = await loadPlayers();
+            if (ok) {
+                document.getElementById('auth-modal').style.display = 'none';
+                document.getElementById('auth-error').style.display = 'none';
+            } else {
+                document.getElementById('auth-error').style.display = 'block';
+            }
+        }
+
+        async function loadPlayers(manual = false) {
+            const token = getAuthToken();
+            if (!token) {
+                document.getElementById('auth-modal').style.display = 'flex';
+                return false;
+            }
+
+            try {
+                const res = await fetch('/api/admin/players', {
+                    headers: { 'x-admin-token': token }
+                });
+                if (res.status === 401) {
+                    document.getElementById('auth-modal').style.display = 'flex';
+                    return false;
+                }
+                const data = await res.json();
+                allPlayers = data.players || [];
+                updateStats(data);
+                renderTable();
+                if (manual) showToast('Données actualisées en direct !');
+                return true;
+            } catch (err) {
+                showToast('Erreur de connexion : ' + err.message, 'error');
+                return false;
+            }
+        }
+
+        function updateStats(data) {
+            const total = allPlayers.length;
+            const online = allPlayers.filter(p => p.isOnline).length;
+            const admins = allPlayers.filter(p => p.is_admin === 1 || p.isAdmin).length;
+            const banned = allPlayers.filter(p => p.is_banned === 1 || p.isBanned).length;
+            const totalGold = allPlayers.reduce((acc, p) => acc + (p.gold || 0), 0);
+
+            document.getElementById('stat-total-players').textContent = total;
+            document.getElementById('stat-online-players').textContent = online;
+            document.getElementById('stat-admins').textContent = admins;
+            document.getElementById('stat-banned').textContent = banned;
+            document.getElementById('stat-total-gold').textContent = totalGold.toLocaleString() + ' 🪙';
+
+            document.getElementById('count-all').textContent = total;
+            document.getElementById('count-online').textContent = online;
+            document.getElementById('count-admin').textContent = admins;
+            document.getElementById('count-banned').textContent = banned;
+        }
+
+        function setFilter(filter) {
+            currentFilter = filter;
+            document.querySelectorAll('.filter-tab').forEach(t => {
+                t.classList.toggle('active', t.getAttribute('data-filter') === filter);
+            });
+            renderTable();
+        }
+
+        function filterTable() {
+            renderTable();
+        }
+
+        function markRowModified(username) {
+            modifiedRows.add(username);
+            const tr = document.getElementById('row-' + username);
+            if (tr) tr.classList.add('modified');
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('players-tbody');
+            const search = (document.getElementById('search-input').value || '').toLowerCase().trim();
+
+            const filtered = allPlayers.filter(p => {
+                const matchesSearch = p.username.toLowerCase().includes(search);
+                if (!matchesSearch) return false;
+                if (currentFilter === 'online') return p.isOnline;
+                if (currentFilter === 'admin') return p.is_admin === 1 || p.isAdmin;
+                if (currentFilter === 'banned') return p.is_banned === 1 || p.isBanned;
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 40px; color: var(--text-muted);">Aucun joueur trouvé.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filtered.map((p, idx) => {
+                const isOnline = !!p.isOnline;
+                const isAdmin = p.is_admin === 1 || p.isAdmin;
+                const isBanned = p.is_banned === 1 || p.isBanned;
+                const isModified = modifiedRows.has(p.username);
+
+                return `
+                <tr id="row-${p.username}" class="${isModified ? 'modified' : ''}">
+                    <td style="color: var(--text-muted); font-size: 11px;">${idx + 1}</td>
+                    <td>
+                        <strong style="color: var(--gold-light); font-size: 14px;">${p.username}</strong>
+                        ${isAdmin ? '<span class="badge badge-admin">👑 Admin</span>' : ''}
+                        ${isBanned ? '<span class="badge badge-banned">🚫 Banni</span>' : ''}
+                    </td>
+                    <td>
+                        ${isOnline 
+                            ? '<span class="badge badge-online"><span class="dot dot-green"></span> En ligne</span>' 
+                            : '<span class="badge badge-offline"><span class="dot dot-gray"></span> Hors ligne</span>'}
+                    </td>
+                    <td style="text-align: center;">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="admin-${p.username}" ${isAdmin ? 'checked' : ''} onchange="markRowModified('${p.username}')">
+                            <span class="slider"></span>
+                        </label>
+                    </td>
+                    <td style="text-align: center;">
+                        <label class="toggle-switch">
+                            <input type="checkbox" class="danger-switch" id="banned-${p.username}" ${isBanned ? 'checked' : ''} onchange="markRowModified('${p.username}')">
+                            <span class="slider"></span>
+                        </label>
+                    </td>
+                    <td>
+                        <input type="number" class="cell-input cell-input-number" id="gold-${p.username}" value="${p.gold || 0}" min="0" max="9999999" oninput="markRowModified('${p.username}')">
+                    </td>
+                    <td>
+                        <input type="number" class="cell-input cell-input-number" style="width: 55px;" id="lives-${p.username}" value="${p.lives !== undefined ? p.lives : 3}" min="0" max="99" oninput="markRowModified('${p.username}')">
+                    </td>
+                    <td>
+                        <select class="cell-select" id="weapon-${p.username}" onchange="markRowModified('${p.username}')">
+                            ${WEAPONS.map(w => `<option value="${w.id}" ${(p.weapon === w.id) ? 'selected' : ''}>${w.name}</option>`).join('')}
+                        </select>
+                    </td>
+                    <td>
+                        <select class="cell-select" id="armor-${p.username}" onchange="markRowModified('${p.username}')">
+                            ${ARMORS.map(a => `<option value="${a.id}" ${(p.armor === a.id) ? 'selected' : ''}>${a.name}</option>`).join('')}
+                        </select>
+                    </td>
+                    <td style="text-align: center;">
+                        <div style="display: flex; gap: 6px; justify-content: center;">
+                            <button class="btn btn-gold btn-sm" id="btn-save-${p.username}" onclick="savePlayer('${p.username}')">💾 Enregistrer</button>
+                            ${isOnline ? `<button class="btn btn-secondary btn-sm" onclick="kickPlayer('${p.username}')" title="Expulser">⚡</button>` : ''}
+                            <button class="btn btn-danger btn-sm" onclick="deletePlayer('${p.username}')" title="Supprimer">🗑️</button>
+                        </div>
+                    </td>
+                </tr>
+                `;
+            }).join('');
+        }
+
+        async function savePlayer(username) {
+            const token = getAuthToken();
+            const btn = document.getElementById('btn-save-' + username);
+            const tr = document.getElementById('row-' + username);
+
+            const gold = parseInt(document.getElementById('gold-' + username).value, 10) || 0;
+            const lives = parseInt(document.getElementById('lives-' + username).value, 10) || 3;
+            const isAdmin = document.getElementById('admin-' + username).checked ? 1 : 0;
+            const isBanned = document.getElementById('banned-' + username).checked ? 1 : 0;
+            const weapon = document.getElementById('weapon-' + username).value;
+            const armor = document.getElementById('armor-' + username).value;
+
+            btn.textContent = '...';
+            try {
+                const res = await fetch('/api/admin/player/update', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-admin-token': token
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        gold: gold,
+                        lives: lives,
+                        is_admin: isAdmin,
+                        is_banned: isBanned,
+                        weapon: weapon,
+                        armor: armor
+                    })
+                });
+
+                const data = await res.json();
+                if (res.status === 200 && data.success) {
+                    modifiedRows.delete(username);
+                    tr.classList.remove('modified');
+                    tr.classList.add('saved-success');
+                    btn.textContent = '✔ Sauvegardé';
+                    showToast('Joueur ' + username + ' mis à jour !');
+                    setTimeout(() => {
+                        tr.classList.remove('saved-success');
+                        btn.textContent = '💾 Enregistrer';
+                    }, 2000);
+                    // Update cache
+                    const target = allPlayers.find(p => p.username === username);
+                    if (target) {
+                        target.gold = gold;
+                        target.lives = lives;
+                        target.is_admin = isAdmin;
+                        target.isAdmin = isAdmin === 1;
+                        target.is_banned = isBanned;
+                        target.isBanned = isBanned === 1;
+                        target.weapon = weapon;
+                        target.armor = armor;
+                        updateStats();
+                    }
+                } else {
+                    btn.textContent = 'Erreur';
+                    showToast(data.error || 'Erreur lors de la sauvegarde', 'error');
+                }
+            } catch(e) {
+                btn.textContent = 'Erreur';
+                showToast('Erreur : ' + e.message, 'error');
+            }
+        }
+
+        async function saveAllModified() {
+            if (modifiedRows.size === 0) {
+                showToast('Aucune modification en attente.');
+                return;
+            }
+            const list = Array.from(modifiedRows);
+            showToast('Sauvegarde de ' + list.length + ' joueur(s) en cours...');
+            for (const user of list) {
+                await savePlayer(user);
+            }
+            showToast('Toutes les modifications ont été enregistrées !');
+        }
+
+        async function kickPlayer(username) {
+            if (!confirm('Expulser ' + username + ' du serveur de jeu immédiatement ?')) return;
+            const token = getAuthToken();
+            try {
+                const res = await fetch('/api/admin/player/kick', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+                    body: JSON.stringify({ username })
+                });
+                const d = await res.json();
+                if (d.success) {
+                    showToast('Joueur ' + username + ' expulsé du jeu.');
+                    loadPlayers();
+                } else {
+                    showToast(d.error || 'Impossible d\'expulser le joueur.', 'error');
+                }
+            } catch(e) {
+                showToast('Erreur : ' + e.message, 'error');
+            }
+        }
+
+        async function deletePlayer(username) {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer définitivement le joueur ' + username + ' ?')) return;
+            const token = getAuthToken();
+            try {
+                const res = await fetch('/api/admin/player/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+                    body: JSON.stringify({ username })
+                });
+                const d = await res.json();
+                if (d.success) {
+                    showToast('Compte ' + username + ' supprimé.');
+                    allPlayers = allPlayers.filter(p => p.username !== username);
+                    modifiedRows.delete(username);
+                    updateStats();
+                    renderTable();
+                } else {
+                    showToast(d.error || 'Erreur lors de la suppression.', 'error');
+                }
+            } catch(e) {
+                showToast('Erreur : ' + e.message, 'error');
+            }
+        }
+
+        // Auto-load on load if token present
+        window.addEventListener('DOMContentLoaded', () => {
+            if (getAuthToken()) {
+                document.getElementById('auth-modal').style.display = 'none';
+                loadPlayers();
+            }
+        });
+    </script>
+</body>
+</html>

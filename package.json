@@ -1,0 +1,27 @@
+{
+    "name": "BrowserQuest",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/browserquest/BrowserQuest.git"
+    },
+    "version": "0.0.1",
+    "private": false,
+    "dependencies": {
+        "better-sqlite3": "^13.0.3",
+        "concurrently": "^10.0.6",
+        "express": "^4.19.0",
+        "localtunnel": "^2.0.2",
+        "log": "^1.4.0",
+        "underscore": "^1.13.0",
+        "ws": "^8.17.0"
+    },
+    "optionalDependencies": {
+        "redis": "^0.12.1"
+    },
+    "scripts": {
+        "start": "node server/js/main.js",
+        "playtest": "node run_playtest.js",
+        "test": "node --test --test-concurrency=1 test/*.test.js",
+        "test:legacy": "make test"
+    }
+}
