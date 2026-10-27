@@ -348,15 +348,6 @@ define(['jquery', 'storage'], function($, Storage) {
                     });
                 };
 
-                // Si déjà connecté avec Firebase dans cette session, réutiliser directement le compte
-                var currentUser = firebase.auth().currentUser;
-                if(currentUser) {
-                    handleSuccessUser(currentUser).catch(function() {
-                        resetGoogleBtns();
-                    });
-                    return;
-                }
-
                 var provider = new firebase.auth.GoogleAuthProvider();
                 provider.setCustomParameters({ prompt: 'select_account' });
 
@@ -365,19 +356,19 @@ define(['jquery', 'storage'], function($, Storage) {
                     return handleSuccessUser(result.user);
                 }).catch(function(error) {
                     clearTimeout(safetyTimer);
-                    if(!error) {
-                        resetGoogleBtns();
-                        return;
-                    }
+                    resetGoogleBtns();
+                    if(!error) return;
+
+                    console.error("[Google Auth Error]", error);
 
                     // Si popup bloqué par le navigateur : fallback immédiat en redirection
                     if(error.code === 'auth/popup-blocked' || (error.code === 'auth/popup-closed-by-user' && error.message && error.message.indexOf('blocked') !== -1)) {
+                        $btn.addClass('loading');
+                        $btn.find('.google-text').text("Redirection Google...");
                         try { sessionStorage.setItem('nova_google_pending', '1'); } catch(e) {}
                         firebase.auth().signInWithRedirect(provider);
                         return;
                     }
-
-                    resetGoogleBtns();
 
                     // Si l'utilisateur referme la popup de sélection
                     if(error.code === 'auth/popup-closed-by-user') {

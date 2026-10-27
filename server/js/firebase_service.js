@@ -8,15 +8,18 @@ var FirebaseService = function() {
     this.tokenExpiry = 0;
     this.googleCerts = null;
     this.certsExpiry = 0;
-    this.projectId = null;
+    this.projectId = process.env.FIREBASE_PROJECT_ID || 'nova-quest-game';
 };
 
 FirebaseService.prototype.init = function(keyPath) {
+    if (!this.projectId) {
+        this.projectId = process.env.FIREBASE_PROJECT_ID || 'nova-quest-game';
+    }
     try {
         if (process.env.FIREBASE_SERVICE_ACCOUNT || process.env.FIREBASE_ADMIN_KEY) {
             var raw = process.env.FIREBASE_SERVICE_ACCOUNT || process.env.FIREBASE_ADMIN_KEY;
             this.key = JSON.parse(raw);
-            this.projectId = this.key.project_id;
+            this.projectId = this.key.project_id || this.projectId;
             if (typeof log !== 'undefined' && log.info) {
                 log.info('Firebase Service initialisé via variable d\'environnement pour : ' + this.projectId);
             }
@@ -32,14 +35,14 @@ FirebaseService.prototype.init = function(keyPath) {
         var foundPath = candidatePaths.find(function(cp) { return cp && fs.existsSync(cp); });
 
         if (!foundPath) {
-            if (typeof log !== 'undefined' && log.warn) {
-                log.warn('Firebase Service: Aucune clé de service trouvée (fichier ou FIREBASE_SERVICE_ACCOUNT)');
+            if (typeof log !== 'undefined' && log.info) {
+                log.info('Firebase Service: Mode validation Google ID Token actif (Projet : ' + this.projectId + ')');
             }
-            return false;
+            return true;
         }
 
         this.key = JSON.parse(fs.readFileSync(foundPath, 'utf8'));
-        this.projectId = this.key.project_id;
+        this.projectId = this.key.project_id || this.projectId;
         if (typeof log !== 'undefined' && log.info) {
             log.info('Firebase Service initialisé pour le projet : ' + this.projectId + ' (' + foundPath + ')');
         }
@@ -125,17 +128,39 @@ FirebaseService.prototype.verifyIdToken = async function(idToken) {
     var parts = idToken.split('.');
     if (parts.length !== 3) return null;
 
+    var targetProjectId = this.projectId || process.env.FIREBASE_PROJECT_ID || 'nova-quest-game';
+
     try {
         var header = JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8'));
         var payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
         var now = Math.floor(Date.now() / 1000);
 
-        if (payload.aud !== this.projectId) return null;
-        if (payload.iss !== 'https://securetoken.google.com/' + this.projectId) return null;
-        if (payload.exp < now) return null;
+        if (payload.aud !== targetProjectId) {
+            if (typeof log !== 'undefined' && log.warn) {
+                log.warn('Firebase verifyIdToken: aud mismatch (' + payload.aud + ' !== ' + targetProjectId + ')');
+            }
+            return null;
+        }
+        if (payload.iss !== 'https://securetoken.google.com/' + targetProjectId) {
+            if (typeof log !== 'undefined' && log.warn) {
+                log.warn('Firebase verifyIdToken: iss mismatch (' + payload.iss + ')');
+            }
+            return null;
+        }
+        if (payload.exp < now) {
+            if (typeof log !== 'undefined' && log.warn) {
+                log.warn('Firebase verifyIdToken: token expiré');
+            }
+            return null;
+        }
 
         var certs = await this.getGoogleCerts();
-        if (!certs || !certs[header.kid]) return null;
+        if (!certs || !certs[header.kid]) {
+            if (typeof log !== 'undefined' && log.warn) {
+                log.warn('Firebase verifyIdToken: clé publique Google introuvable pour kid: ' + header.kid);
+            }
+            return null;
+        }
 
         var cert = certs[header.kid];
         var verifier = crypto.createVerify('RSA-SHA256');
@@ -146,9 +171,13 @@ FirebaseService.prototype.verifyIdToken = async function(idToken) {
             return {
                 uid: payload.sub,
                 email: payload.email || '',
-                name: payload.name || payload.email ? payload.email.split('@')[0] : 'Hero',
+                name: payload.name || (payload.email ? payload.email.split('@')[0] : 'Hero'),
                 picture: payload.picture || ''
             };
+        } else {
+            if (typeof log !== 'undefined' && log.warn) {
+                log.warn('Firebase verifyIdToken: signature invalide');
+            }
         }
     } catch(err) {
         if (typeof log !== 'undefined' && log.error) {
