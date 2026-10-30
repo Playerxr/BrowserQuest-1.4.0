@@ -1,0 +1,17 @@
+{
+  "appId": "com.universnovastudio.novaquest",
+  "appName": "Nova Quest",
+  "webDir": "client",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true,
+    "allowNavigation": [
+      "quest.universnovastudio.online",
+      "*.universnovastudio.online",
+      "*.firebaseapp.com",
+      "*.google.com",
+      "*.googleapis.com"
+    ]
+  }
+}

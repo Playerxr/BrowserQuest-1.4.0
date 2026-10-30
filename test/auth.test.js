@@ -198,5 +198,12 @@ test('Google account creation handles existing username collisions and re-authen
     const reloginRes = await googleRelogin.completed;
     assert.equal(reloginRes.success, true);
     assert.equal(googleRelogin.name, 'Jean1');
+
+    // Choosing a new available hero name after Google authentication updates the player's name
+    const googleChosenName = player('Excalibur', '');
+    db.loginWithGoogle(googleChosenName, googleInfo);
+    const chosenRes = await googleChosenName.completed;
+    assert.equal(chosenRes.success, true);
+    assert.equal(googleChosenName.name, 'Excalibur');
 });
 

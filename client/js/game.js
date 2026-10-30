@@ -357,13 +357,15 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
             } else {
                 this.sprites = this.spritesets[scale - 1];
 
-                _.each(this.entities, function(entity) {
-                    entity.sprite = null;
-                    entity.setSprite(self.sprites[entity.getSpriteName()]);
-                });
-                this.initHurtSprites();
-                this.initShadows();
-                this.initCursors();
+                if(this.ready && this.spritesLoaded()) {
+                    _.each(this.entities, function(entity) {
+                        entity.sprite = null;
+                        entity.setSprite(self.sprites[entity.getSpriteName()]);
+                    });
+                    this.initHurtSprites();
+                    this.initShadows();
+                    this.initCursors();
+                }
             }
         },
 
@@ -770,7 +772,7 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
                 return this.entities[id];
             }
             else {
-                log.error("Unknown entity id : " + id, true);
+                log.debug("Unknown entity id : " + id);
             }
         },
 
@@ -1857,21 +1859,35 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
         },
 
         /**
-         * Opens the nearest Chest or loots the nearest dropped Item within 6 tiles,
-         * or talks to the nearest NPC if one is adjacent.
+         * Bouton d'action circulaire mobile : attaque la cible la plus proche,
+         * ramasse les objets / ouvre les coffres proches ou parle aux PNJ.
          */
         makePlayerInteractClosest: function() {
             if(!this.player || this.player.isDead) return;
             var self = this,
+                bestMob = null,
+                bestMobDist = 999,
                 bestChest = null,
                 bestChestDist = 999,
                 bestItem = null,
-                bestItemDist = 999;
+                bestItemDist = 999,
+                bestNpc = null,
+                bestNpcDist = 999;
+
+            if(this.player.hasTarget() && (this.player.target instanceof Mob) && !this.player.target.isDead && this.getEntityById(this.player.target.id)) {
+                this.makePlayerAttack(this.player.target);
+                return;
+            }
 
             this.forEachEntity(function(entity) {
-                if(!entity) return;
+                if(!entity || entity.id === self.player.id) return;
                 var d = Math.abs(self.player.gridX - entity.gridX) + Math.abs(self.player.gridY - entity.gridY);
-                if(entity instanceof Chest) {
+                if((entity instanceof Mob) && !entity.isDead) {
+                    if(d <= 8 && d < bestMobDist) {
+                        bestMobDist = d;
+                        bestMob = entity;
+                    }
+                } else if(entity instanceof Chest) {
                     if(d <= 7 && d < bestChestDist) {
                         bestChestDist = d;
                         bestChest = entity;
@@ -1881,9 +1897,29 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
                         bestItemDist = d;
                         bestItem = entity;
                     }
+                } else if(entity instanceof Npc) {
+                    if(d <= 5 && d < bestNpcDist) {
+                        bestNpcDist = d;
+                        bestNpc = entity;
+                    }
                 }
             });
 
+            // 1. Objet ou coffre immédiatement adjacent ou plus proche qu'un monstre
+            if(bestChest && bestChestDist <= bestItemDist && bestChestDist <= bestMobDist) {
+                this.makePlayerOpenChest(bestChest);
+                return;
+            }
+            if(bestItem && bestItemDist <= bestMobDist) {
+                this.makePlayerGoToItem(bestItem);
+                return;
+            }
+            // 2. Monstre ou Boss à portée de combat
+            if(bestMob) {
+                this.makePlayerAttack(bestMob);
+                return;
+            }
+            // 3. Coffre ou objet à proximité
             if(bestChest && bestChestDist <= bestItemDist) {
                 this.makePlayerOpenChest(bestChest);
                 return;
@@ -1892,6 +1928,16 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
                 this.makePlayerGoToItem(bestItem);
                 return;
             }
+            // 4. PNJ à proximité
+            if(bestNpc) {
+                if(this.player.isAdjacentNonDiagonal(bestNpc)) {
+                    this.makeNpcTalk(bestNpc);
+                } else {
+                    this.makePlayerTalkTo(bestNpc);
+                }
+                return;
+            }
+
             this.makePlayerAttackClosest();
         },
 

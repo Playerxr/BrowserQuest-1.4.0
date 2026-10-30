@@ -7,6 +7,9 @@
     "version": "0.0.1",
     "private": false,
     "dependencies": {
+        "@capacitor/android": "^6.0.0",
+        "@capacitor/cli": "^6.0.0",
+        "@capacitor/core": "^6.0.0",
         "better-sqlite3": "^13.0.3",
         "concurrently": "^10.0.6",
         "express": "^4.19.0",
@@ -23,7 +26,10 @@
         "build": "echo 'No build step required'",
         "start": "node server/js/main.js",
         "playtest": "node run_playtest.js",
+        "cap:sync": "npx cap sync android && node scripts/configure-android.js",
+        "cap:android": "npx cap open android",
         "test": "node --test --test-concurrency=1 test/*.test.js",
         "test:legacy": "make test"
     }
 }
+

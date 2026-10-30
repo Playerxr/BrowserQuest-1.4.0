@@ -327,8 +327,7 @@ define(['jquery', 'app', 'entrypoint'], function($, App, EntryPoint) {
             $('#chatbox').val('');
 
             var isPadActiveOnMobile = function() {
-                var isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || game.renderer.mobile || game.renderer.tablet || (app && (app.isMobile || app.isTablet));
-                return isTouch && $('#mobile-controls').hasClass('visible') && (!app || app.disableTouchMove !== false);
+                return Boolean(app && app.disableTouchMove === true && $('#mobile-controls').hasClass('visible'));
             };
 
             if(game.renderer.mobile || game.renderer.tablet) {

@@ -2057,7 +2057,7 @@ footer, header, hgroup, menu, nav, section {
     cursor: pointer;
 }
 
-/* Contrôles Tactiles & Combat Mobile (Joystick + Boutons d'Action Boss) */
+/* Contrôles Tactiles Mobile (Joystick Analogique Virtuel + Bouton d'Action Circulaire) */
 #mobile-controls {
     display: none;
     position: absolute;
@@ -2070,96 +2070,54 @@ footer, header, hgroup, menu, nav, section {
     user-select: none;
     -webkit-user-select: none;
 }
-#mobile-controls.visible {
-    display: block;
+body.touch-device #mobile-controls.visible {
+    display: block !important;
 }
 
 #mobile-joystick-zone {
     position: absolute;
-    left: 14px;
-    bottom: 8px;
-    width: 148px;
-    height: 148px;
+    left: 18px;
+    bottom: 10px;
+    width: 140px;
+    height: 140px;
     pointer-events: auto;
     touch-action: none;
     transition: transform 0.15s ease, opacity 0.15s ease;
 }
-#mobile-joystick-zone.active .dpad-cross {
+.joystick-base {
+    position: relative;
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(22, 27, 44, 0.55) 0%, rgba(10, 13, 22, 0.72) 100%);
+    border: 2.5px solid rgba(234, 179, 8, 0.65);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.65), inset 0 0 14px rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+#mobile-joystick-zone.active .joystick-base {
     border-color: rgba(250, 204, 21, 0.95);
     box-shadow: 0 0 20px rgba(234, 179, 8, 0.5), inset 0 0 12px rgba(234, 179, 8, 0.25);
 }
-.dpad-cross {
-    position: relative;
-    width: 148px;
-    height: 148px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(22, 27, 44, 0.85) 0%, rgba(10, 13, 22, 0.92) 100%);
-    border: 2.5px solid rgba(234, 179, 8, 0.65);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-.dpad-btn {
+.joystick-stick {
     position: absolute;
-    width: 44px;
-    height: 44px;
-    background: rgba(45, 55, 72, 0.85);
-    border: 1.5px solid rgba(254, 240, 138, 0.5);
-    border-radius: 10px;
-    color: #fef08a;
-    font-size: 17px;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    padding: 0;
-    touch-action: none;
-    transition: transform 0.06s ease, background 0.08s ease;
-}
-.dpad-btn.pressed {
-    background: linear-gradient(180deg, #facc15 0%, #ca8a04 100%) !important;
-    color: #1c1917 !important;
-    border-color: #ffffff !important;
-    box-shadow: 0 0 10px rgba(250, 204, 21, 0.75);
-    transform: scale(0.92);
-}
-.dpad-up {
-    top: 4px;
-    left: 52px;
-}
-.dpad-down {
-    bottom: 4px;
-    left: 52px;
-}
-.dpad-left {
-    left: 4px;
-    top: 52px;
-}
-.dpad-right {
-    right: 4px;
-    top: 52px;
-}
-.dpad-center {
-    position: absolute;
-    top: 50px;
-    left: 50px;
-    width: 48px;
-    height: 48px;
+    top: 50%;
+    left: 50%;
+    width: 56px;
+    height: 56px;
+    margin-top: -28px;
+    margin-left: -28px;
     border-radius: 50%;
     background: radial-gradient(circle at 35% 35%, #fef08a 0%, #eab308 55%, #854d0e 100%);
-    border: 2px solid #ffffff;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.65), inset 0 2px 4px rgba(255, 255, 255, 0.8);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
+    border: 2.5px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7), inset 0 2px 4px rgba(255, 255, 255, 0.85);
     pointer-events: none;
-    transition: transform 0.04s cubic-bezier(0.1, 0.7, 0.1, 1);
+    transform: translate(0px, 0px);
+    transition: box-shadow 0.1s ease;
 }
-#mobile-joystick-zone.active .dpad-center {
-    box-shadow: 0 0 16px rgba(254, 240, 138, 0.9), inset 0 2px 6px rgba(255, 255, 255, 1);
+#mobile-joystick-zone.active .joystick-stick {
+    box-shadow: 0 0 16px rgba(254, 240, 138, 0.95), inset 0 2px 6px rgba(255, 255, 255, 1);
 }
 
 /* Accessibilité masquée visuellement pour lecteurs d'écran */
@@ -2573,6 +2531,13 @@ input:checked + .hub-slider:before {
 html, body {
     box-sizing: border-box !important;
     overflow: hidden !important;
+    overscroll-behavior: none !important;
+    touch-action: none !important;
+    -webkit-touch-callout: none !important;
+    -webkit-user-select: none !important;
+    user-select: none !important;
+    position: fixed !important;
+    inset: 0 !important;
     height: 100% !important;
     width: 100% !important;
     margin: 0 !important;
@@ -2716,7 +2681,7 @@ html, body {
 .google-fallback-link:hover {
     color: #8c2514 !important;
 }
-#create-new, #back-to-login {
+#create-new, #back-to-login, #google-name-cancel {
     cursor: pointer;
     margin-top: 10px;
 }
@@ -2725,7 +2690,167 @@ html, body {
     font-size: 14px;
     text-decoration: underline;
     transition: color 0.2s ease;
+    cursor: pointer !important;
 }
 #create-new span:hover, #back-to-login span:hover {
     color: #fff;
 }
+#google-name-cancel span {
+    color: #4a341e !important;
+    font-size: 12px !important;
+    text-decoration: underline !important;
+    text-shadow: none !important;
+    cursor: pointer !important;
+}
+#google-name-cancel span:hover {
+    color: #8c2514 !important;
+}
+
+#parchment.google-choose-name #createcharacter,
+#parchment.google-choose-name #loadcharacter {
+    display: none !important;
+}
+
+#parchment.google-choose-name #google-name-chooser {
+    display: block !important;
+    text-align: center;
+}
+
+.game #google-name-chooser,
+body.started #google-name-chooser {
+    display: none !important;
+}
+
+#google-name-chooser h1 {
+    margin-top: 16px;
+    margin-bottom: 8px;
+}
+
+.google-verified-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.92);
+    color: #2b1708;
+    border: 1px solid #8c6239;
+    border-radius: 14px;
+    padding: 4px 12px;
+    font-size: 11px;
+    font-weight: bold;
+    margin: 4px auto 6px auto;
+    text-shadow: none;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.google-verified-badge .google-icon {
+    width: 14px;
+    height: 14px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath fill='%23EA4335' d='M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z'/%3E%3Cpath fill='%234285F4' d='M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z'/%3E%3Cpath fill='%23FBBC05' d='M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.79l7.97-6.2z'/%3E%3Cpath fill='%2334A853' d='M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z'/%3E%3C/svg%3E") no-repeat center center;
+    background-size: contain;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+.google-chooser-hint {
+    font-size: 12px !important;
+    line-height: 1.4 !important;
+    color: #3d2610;
+    margin: 4px auto 8px auto !important;
+    text-shadow: none;
+}
+
+#google-name-chooser input {
+    display: block;
+    margin: 8px auto 12px auto;
+    text-align: center;
+}
+
+.google-play-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: linear-gradient(180deg, #5c9e31 0%, #3d731b 100%);
+    border: 2px solid #23470d;
+    border-radius: 6px;
+    padding: 8px 18px;
+    margin: 6px auto 8px auto;
+    cursor: pointer !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.35);
+    transition: all 0.15s ease;
+}
+
+.google-play-btn:hover {
+    background: linear-gradient(180deg, #6bb53b 0%, #488621 100%);
+    transform: translateY(-1px);
+}
+
+.google-play-btn .link {
+    color: #fff !important;
+    font-size: 14px;
+    font-weight: bold;
+    text-shadow: 1px 1px 1px rgba(0,0,0,0.6);
+    cursor: pointer !important;
+}
+
+.google-play-btn.loading {
+    opacity: 0.8;
+    pointer-events: none;
+}
+
+/* ==========================================================================
+   VISIBILITÉ AUTOMATIQUE SUR APPAREILS TACTILES & MASQUAGE TOTAL SUR PC
+   ========================================================================== */
+body:not(.touch-device) #mobile-controls,
+body:not(.touch-device) #touch-controls-toggle,
+body:not(.touch-device) #pad-zoom-minus,
+body:not(.touch-device) #pad-quick-size,
+body:not(.touch-device) #pad-zoom-plus,
+body:not(.touch-device) .mobile-only-ui {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+body:not(.nova-mobile-app) .mobile-server-bar {
+    display: none !important;
+}
+
+.mobile-server-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 6px auto 0 auto;
+    font-size: 11px;
+    color: #4a341e;
+    text-shadow: none;
+}
+
+.mobile-server-bar .mobile-server-label {
+    color: #4a341e;
+}
+
+.mobile-server-bar .mobile-server-host {
+    color: #2b1708;
+}
+
+.mobile-server-bar .mobile-server-change-btn {
+    background: rgba(65, 48, 30, 0.16);
+    border: 1px solid #8c6239;
+    border-radius: 4px;
+    padding: 2px 7px;
+    font-size: 10px;
+    font-family: 'GraphicPixel', sans-serif;
+    color: #2b1708;
+    cursor: pointer;
+}
+
+.mobile-server-bar .mobile-server-change-btn:hover {
+    background: #ca8a04;
+    color: #000;
+}
+
+
+

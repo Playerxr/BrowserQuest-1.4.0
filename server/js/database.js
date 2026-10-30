@@ -339,6 +339,15 @@ module.exports = DatabaseHandler = cls.Class.extend({
                 this._rejectAuthentication(player, 'banned');
                 return;
             }
+            var requestedName = (player.name && player.name !== 'Hero' && player.name !== 'GoogleHero')
+                ? String(player.name).replace(/[^a-zA-Z0-9_\-\u00C0-\u017F]/g, '').trim().substr(0, 12)
+                : '';
+            if(requestedName.length >= 2 && requestedName !== existing.username && !this.stmtGetPlayer.get(requestedName)) {
+                try {
+                    this.db.prepare("UPDATE players SET username = ? WHERE username = ?").run(requestedName, existing.username);
+                    existing.username = requestedName;
+                } catch(e) {}
+            }
             player.name = existing.username;
             if(this._isNameLoggedIn(player)) {
                 this._rejectAuthentication(player, 'loggedin');

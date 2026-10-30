@@ -61,6 +61,10 @@ define(['jquery', 'animation', 'sprites'], function($, Animation, sprites) {
         },
 
         createHurtSprite: function() {
+            if(!this.isLoaded || !this.image || !this.image.width || !this.image.height) {
+                this.whiteSprite = this;
+                return;
+            }
             var canvas = document.createElement('canvas'),
                 ctx = canvas.getContext('2d'),
                 width = this.image.width,
@@ -93,16 +97,25 @@ define(['jquery', 'animation', 'sprites'], function($, Animation, sprites) {
                     height: this.height
                 };
             } catch(e) {
-                log.error("Error getting image data for sprite : "+this.name);
+                log.debug("Fallback whiteSprite for sprite : "+this.name);
                 this.whiteSprite = this;
             }
         },
 
         getHurtSprite: function() {
-            return this.whiteSprite;
+            if(!this.whiteSprite || this.whiteSprite === this) {
+                if(this.isLoaded && this.image && this.image.width && this.image.height) {
+                    this.createHurtSprite();
+                }
+            }
+            return this.whiteSprite || this;
         },
 
         createSilhouette: function() {
+            if(!this.isLoaded || !this.image || !this.image.width || !this.image.height) {
+                this.silhouetteSprite = this;
+                return;
+            }
             var canvas = document.createElement('canvas'),
                 ctx = canvas.getContext('2d'),
                 width = this.image.width,

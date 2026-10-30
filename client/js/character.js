@@ -408,7 +408,7 @@ define(['entity', 'transition', 'timer'], function(Entity, Transition, Timer) {
             if(!this.isAttackedBy(character)) {
                 this.attackers[character.id] = character;
             } else {
-                log.error(this.id + " is already attacked by " + character.id);
+                log.debug(this.id + " is already attacked by " + character.id);
             }
         },
 
@@ -420,7 +420,7 @@ define(['entity', 'transition', 'timer'], function(Entity, Transition, Timer) {
             if(this.isAttackedBy(character)) {
                 delete this.attackers[character.id];
             } else {
-                log.error(this.id + " is not attacked by " + character.id);
+                log.debug(this.id + " is not attacked by " + character.id);
             }
         },
 
@@ -476,7 +476,7 @@ define(['entity', 'transition', 'timer'], function(Entity, Transition, Timer) {
             var self = this;
 
             if(this.target) {
-                if(this.target instanceof Character) {
+                if(this.target instanceof Character && this.target.isAttackedBy(this)) {
                     this.target.removeAttacker(this);
                 }
                 if(this.removetarget_callback) this.removetarget_callback(this.target.id);

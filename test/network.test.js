@@ -217,3 +217,28 @@ test('dispatcher and assigned game endpoints still use their configured host and
     client.connection.onmessage({ data: JSON.stringify({ status: 'OK', host: '2001:db8::1', port: 80 }) });
     assert.equal(harness.urls[1], 'wss://[2001:db8::1]:80/');
 });
+
+test('Capacitor Android APK (com.universnovastudio.novaquest) overrides localhost and connects to wss://quest.universnovastudio.online/', () => {
+    const urls = [];
+    let Client;
+    function MockSocket(url) { urls.push(url); }
+    const context = {
+        Class,
+        Types,
+        window: {
+            location: { protocol: 'https:', hostname: 'localhost', host: 'localhost', port: '' },
+            Capacitor: { isNativePlatform: () => true }
+        },
+        log: global.log,
+        WebSocket: MockSocket,
+        setTimeout() { return 1; },
+        clearTimeout() {},
+        define(deps, factory) { Client = factory(function () {}, {}, {}); }
+    };
+    vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../client/js/gameclient.js'), 'utf8'), context);
+    const client = new Client('localhost', 8000);
+    client.connect(false);
+    assert.equal(urls[0], 'wss://quest.universnovastudio.online/');
+});
+
+

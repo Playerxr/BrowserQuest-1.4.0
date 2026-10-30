@@ -53,11 +53,35 @@ define(['player', 'entityfactory', 'lib/bison'], function(Player, EntityFactory,
         },
 
         connect: function(dispatcherMode) {
-            var protocol = (window.location.protocol === "https:") ? "wss://" : "ws://",
-                explicitEndpoint = dispatcherMode || this.wasDispatched || !window.location.host,
-                host = explicitEndpoint ? (this.host || window.location.hostname || "localhost") : window.location.hostname,
-                port = explicitEndpoint ? this.port : window.location.port,
+            var isCapacitorOrApk = (typeof window !== "undefined") && Boolean(
+                    window.Capacitor ||
+                    window.IS_NOVA_MOBILE_APP ||
+                    (window.location && (
+                        window.location.protocol === "capacitor:" ||
+                        window.location.protocol === "file:" ||
+                        (window.location.hostname === "localhost" && !window.location.port)
+                    ))
+                ),
+                protocol = (isCapacitorOrApk || (window.location && window.location.protocol === "https:")) ? "wss://" : "ws://",
+                explicitEndpoint = dispatcherMode || this.wasDispatched || !window.location.host || isCapacitorOrApk,
+                host = isCapacitorOrApk
+                    ? ((this.host && this.host !== "localhost") ? this.host : "quest.universnovastudio.online")
+                    : (explicitEndpoint ? (this.host || window.location.hostname || "quest.universnovastudio.online") : window.location.hostname),
+                port = isCapacitorOrApk
+                    ? (dispatcherMode || this.wasDispatched ? this.port : 443)
+                    : (explicitEndpoint ? this.port : window.location.port),
                 self = this;
+
+            if(window.NOVA_SERVER_URL && isCapacitorOrApk && !dispatcherMode && !this.wasDispatched) {
+                var match = String(window.NOVA_SERVER_URL).match(/^(https?|wss?):\/\/([^\/:]+)(?::(\d+))?/i);
+                if(match) {
+                    var scheme = match[1].toLowerCase();
+                    protocol = (scheme === "https" || scheme === "wss") ? "wss://" : "ws://";
+                    host = match[2];
+                    port = match[3] ? parseInt(match[3], 10) : (protocol === "wss://" ? 443 : 80);
+                    explicitEndpoint = true;
+                }
+            }
 
             if(this.connectionTimer) clearTimeout(this.connectionTimer);
             this.hasFailedLogin = false;

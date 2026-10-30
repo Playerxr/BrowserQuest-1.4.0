@@ -1,8 +1,6 @@
 node_modules
 client-build
 build.txt
-config_build.json
-config_local*
 .DS_Store
 *.swp
 .project
@@ -22,4 +20,12 @@ cloudflared.exe
 *.db-shm
 *.db-wal
 backups/
-.aistudio/
+
+# Build Android local
+android/.gradle/
+android/build/
+android/app/build/
+android/app/src/main/assets/www/
+*.apk
+*.keystore
+

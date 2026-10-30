@@ -208,12 +208,90 @@ define(['jquery', 'storage'], function($, Storage) {
             }
         },
 
+        openGoogleNameChooser: function(idToken, suggestedName, email) {
+            var self = this;
+            this.pendingGoogleAuth = {
+                idToken: idToken,
+                email: email || ''
+            };
+
+            $('.google-auth-btn').removeClass('loading').prop('disabled', false);
+            $('#google-login-btn .google-text').text("Se connecter avec Google");
+            $('#google-signup-btn .google-text').text("Créer avec Google");
+            $('#google-name-submit').removeClass('loading');
+            $('#google-name-submit .link').text("Entrer dans l'Aventure");
+            $('#google-name-submit .google-play-spinner').hide();
+            this.setPlayButtonState(true);
+            this.clearValidationErrors();
+            $('#google-name-validation').empty();
+
+            var cleanSuggested = String(suggestedName || '').replace(/[^a-zA-Z0-9_\-\u00C0-\u017F]/g, '').trim().substr(0, 12);
+            $('#google-verified-email').text(email ? ('Google : ' + email) : 'Compte Google authentifié');
+            $('#parchment').addClass('google-choose-name');
+            $('#google-name-chooser').show();
+
+            var $input = $('#google-name-input');
+            $input.removeClass('field-error').val(cleanSuggested);
+            setTimeout(function() {
+                $input.focus().select();
+            }, 50);
+        },
+
+        closeGoogleNameChooser: function() {
+            this.pendingGoogleAuth = null;
+            $('#google-name-validation').empty();
+            $('#google-name-input').removeClass('field-error');
+            $('#google-name-chooser').hide();
+            $('#parchment').removeClass('google-choose-name');
+            this.setPlayButtonState(true);
+        },
+
+        submitGoogleChosenName: function() {
+            if(!this.pendingGoogleAuth || !this.pendingGoogleAuth.idToken || this.starting) {
+                return;
+            }
+            var $input = $('#google-name-input');
+            var chosenName = String($input.val() || '').trim();
+            $('#google-name-validation').empty();
+            $input.removeClass('field-error');
+
+            var showNameError = function(msg) {
+                $('<span/>', {
+                    'class': 'validation-error blink',
+                    text: msg
+                }).appendTo('#google-name-validation');
+                $input.addClass('field-error').focus();
+            };
+
+            if(!chosenName) {
+                showNameError('Veuillez choisir un pseudo pour votre héros.');
+                return;
+            }
+            if(chosenName.length < 2 || chosenName.length > 12) {
+                showNameError('Le pseudo doit contenir entre 2 et 12 caractères.');
+                return;
+            }
+            if(!/^[a-zA-Z0-9_\-\u00C0-\u017F]+$/.test(chosenName)) {
+                showNameError('Le pseudo ne peut contenir que des lettres, chiffres ou tirets.');
+                return;
+            }
+
+            try {
+                localStorage.setItem('nova_google_fallback_name', chosenName);
+            } catch(e) {}
+
+            this.startGoogleGame(this.pendingGoogleAuth.idToken, chosenName);
+        },
+
         startGoogleGame: function(idToken, preferredName) {
             var self = this;
             self.setPlayButtonState(false);
             $('.google-auth-btn').addClass('loading');
             $('#google-login-btn .google-text').text("Connexion en cours...");
             $('#google-signup-btn .google-text').text("Connexion en cours...");
+            $('#google-name-submit').addClass('loading');
+            $('#google-name-submit .link').text("Connexion en cours...");
+            $('#google-name-submit .google-play-spinner').show();
 
             var cleanPreferred = String(preferredName || '').replace(/[^a-zA-Z0-9_\-\u00C0-\u017F]/g, '').trim().substr(0, 12);
 
@@ -221,6 +299,9 @@ define(['jquery', 'storage'], function($, Storage) {
                 $('.google-auth-btn').removeClass('loading').prop('disabled', false);
                 $('#google-login-btn .google-text').text("Se connecter avec Google");
                 $('#google-signup-btn .google-text').text("Créer avec Google");
+                $('#google-name-submit').removeClass('loading');
+                $('#google-name-submit .link').text("Entrer dans l'Aventure");
+                $('#google-name-submit .google-play-spinner').hide();
                 self.setPlayButtonState(true);
             };
 
@@ -242,6 +323,8 @@ define(['jquery', 'storage'], function($, Storage) {
                         resetBtns();
 
                         if(result.success === true) {
+                            $('#google-name-chooser').hide();
+                            $('#parchment').removeClass('google-choose-name');
                             self.start();
                         } else {
                             switch(result.reason) {
@@ -285,6 +368,8 @@ define(['jquery', 'storage'], function($, Storage) {
         initGoogleAuth: function() {
             var self = this;
 
+            try { localStorage.removeItem('nova_google_fallback_uid'); } catch(e) {}
+
             var resetGoogleBtns = function() {
                 $('.google-auth-btn').removeClass('loading').prop('disabled', false);
                 $('#google-login-btn .google-text').text("Se connecter avec Google");
@@ -309,156 +394,127 @@ define(['jquery', 'storage'], function($, Storage) {
                 return p1 || p2;
             };
 
-            var base64UrlEncode = function(obj) {
-                var json = JSON.stringify(obj);
-                var b64 = btoa(unescape(encodeURIComponent(json)));
-                return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+            // Attendre que l'onglet soit au premier plan (crucial sur mobile où les onglets en arrière-plan sont suspendus)
+            var runWhenTabVisible = function(fn) {
+                if(typeof document === 'undefined' || !document.hidden) {
+                    fn();
+                    return;
+                }
+                var onVisible = function() {
+                    if(!document.hidden) {
+                        document.removeEventListener('visibilitychange', onVisible);
+                        window.removeEventListener('focus', onVisible);
+                        fn();
+                    }
+                };
+                document.addEventListener('visibilitychange', onVisible);
+                window.addEventListener('focus', onVisible);
             };
 
-            var fallbackDirectGoogleLogin = function() {
+            var presentGoogleNameStep = function(user) {
+                if(!user || (self.game && self.game.started)) return Promise.resolve();
                 clearPendingFlags();
-                var rawFieldVal = (self.getUsernameField && self.getUsernameField().length) ? String(self.getUsernameField().val() || '').trim() : '';
-                var storedName = '';
-                var storedUid = '';
-                try {
-                    storedName = localStorage.getItem('nova_google_fallback_name') || '';
-                    storedUid = localStorage.getItem('nova_google_fallback_uid') || '';
-                } catch(e) {}
-
-                var cleanName = rawFieldVal || storedName;
-                if(!cleanName) {
-                    cleanName = 'Heros' + Math.floor(100 + Math.random() * 899);
-                }
-                cleanName = cleanName.replace(/[^a-zA-Z0-9_\-\u00C0-\u017F]/g, '').substr(0, 15) || 'HerosGoogle';
-
-                var uid = storedUid;
-                if(rawFieldVal) {
-                    uid = 'google_user_' + cleanName.toLowerCase();
-                } else if(!uid) {
-                    uid = 'google_' + Date.now() + '_' + Math.floor(1000 + Math.random() * 9000);
-                }
-
-                try {
-                    localStorage.setItem('nova_google_fallback_name', cleanName);
-                    localStorage.setItem('nova_google_fallback_uid', uid);
-                } catch(e) {}
-
-                var email = cleanName.toLowerCase() + '@gmail.com';
-                var header = { alg: 'none', typ: 'JWT' };
-                var payload = {
-                    sub: uid,
-                    user_id: uid,
-                    email: email,
-                    name: cleanName,
-                    iss: 'https://securetoken.google.com/nova-quest-game',
-                    aud: 'nova-quest-game',
-                    exp: Math.floor(Date.now() / 1000) + 3600
-                };
-                var directToken = base64UrlEncode(header) + '.' + base64UrlEncode(payload) + '.direct';
-                self.startGoogleGame(directToken, cleanName);
+                return new Promise(function(resolve) {
+                    runWhenTabVisible(function() {
+                        user.getIdToken(true).then(function(idToken) {
+                            var prefName = (self.getUsernameField && self.getUsernameField().length) ? String(self.getUsernameField().val() || '').trim() : '';
+                            var savedName = '';
+                            try { savedName = localStorage.getItem('nova_google_fallback_name') || ''; } catch(e) {}
+                            var suggested = prefName || savedName || user.displayName || '';
+                            self.openGoogleNameChooser(idToken, suggested, user.email || '');
+                            resolve();
+                        }).catch(function(err) {
+                            resetGoogleBtns();
+                            self.showGoogleAlert("Impossible de valider la session Google. Veuillez réessayer.");
+                            resolve();
+                        });
+                    });
+                });
             };
 
             var triggerGoogleAuth = function(forceRedirect) {
                 self.clearValidationErrors();
                 $('#google-alert-banner').hide().empty();
 
-                var $btns = $('.google-auth-btn');
-                $btns.addClass('loading');
-                $btns.find('.google-text').text("Connexion en cours...");
-                self.setPlayButtonState(false);
-
                 if(!window.firebase || typeof firebase.auth !== 'function') {
-                    fallbackDirectGoogleLogin();
+                    self.showGoogleAlert("Le service d'authentification Google (Firebase) n'est pas disponible. Rechargez la page.");
                     return;
                 }
+
+                var $btns = $('.google-auth-btn');
+                $btns.addClass('loading');
+                $btns.find('.google-text').text("Authentification Google...");
+                self.setPlayButtonState(false);
 
                 var isInIframe = false;
                 try { isInIframe = (window.self !== window.top); } catch(e) { isInIframe = true; }
 
-                // Dans un iframe (aperçu AI Studio) ou via le lien "Connexion Google directe", connexion immédiate sans popup bloqué
-                if(forceRedirect || isInIframe) {
-                    fallbackDirectGoogleLogin();
-                    return;
-                }
-
-                // Timeout de sécurité 15s
-                var safetyTimer = setTimeout(function() {
-                    resetGoogleBtns();
-                    fallbackDirectGoogleLogin();
-                }, 15000);
-
-                var handleSuccessUser = function(user) {
-                    clearTimeout(safetyTimer);
-                    clearPendingFlags();
-                    return user.getIdToken(true).then(function(idToken) {
-                        var prefName = (self.getUsernameField && self.getUsernameField().length) ? self.getUsernameField().val() : '';
-                        self.startGoogleGame(idToken, prefName || user.displayName);
-                    }).catch(function() {
-                        fallbackDirectGoogleLogin();
-                    });
-                };
+                var ua = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '';
+                var isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(ua) ||
+                                     (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 1 && window.innerWidth <= 1024);
 
                 try {
                     var authInstance = firebase.auth();
-                    var currentUser = authInstance.currentUser;
-                    if(currentUser) {
-                        handleSuccessUser(currentUser).catch(function() {
-                            authInstance.signOut().then(function() {
-                                resetGoogleBtns();
-                            });
-                        });
-                        return;
-                    }
-
                     var provider = new firebase.auth.GoogleAuthProvider();
-                    var isMobileDevice = !self.isDesktop || (window.innerWidth <= 768) || (typeof Detect !== 'undefined' && Detect.isMobile && Detect.isMobile());
+                    if(provider && typeof provider.setCustomParameters === 'function') {
+                        provider.setCustomParameters({ prompt: 'select_account' });
+                    }
 
+                    // Sur mobile ou via le lien "Connexion Google directe" (hors iframe), utiliser la redirection dans le MÊME onglet
+                    // afin de ne jamais dépendre d'un onglet en arrière-plan suspendu par le téléphone
                     if((forceRedirect || isMobileDevice) && !isInIframe) {
-                        $btns.find('.google-text').text("Redirection Google...");
+                        $btns.find('.google-text').text("Redirection vers Google...");
                         setPendingFlags();
-                        clearTimeout(safetyTimer);
-                        authInstance.signInWithRedirect(provider).catch(function() {
-                            fallbackDirectGoogleLogin();
+                        authInstance.signInWithRedirect(provider).catch(function(err) {
+                            clearPendingFlags();
+                            resetGoogleBtns();
+                            if(err && err.code === 'auth/unauthorized-domain') {
+                                self.showGoogleAlert("Domaine non autorisé dans Firebase Console (" + window.location.hostname + ").");
+                            } else {
+                                self.showGoogleAlert("Erreur de redirection Google : " + (err && (err.message || err.code) ? (err.message || err.code) : "inconnue"));
+                            }
                         });
                         return;
                     }
 
+                    setPendingFlags();
                     authInstance.signInWithPopup(provider).then(function(result) {
-                        return handleSuccessUser(result.user);
-                    }).catch(function(error) {
-                        clearTimeout(safetyTimer);
-                        if(!error) {
-                            resetGoogleBtns();
-                            return;
+                        if(result && result.user) {
+                            return presentGoogleNameStep(result.user);
                         }
-
-                        console.warn("[Google Auth Fallback]", error.code || error.message);
-
-                        // En cas de domaine de prévisualisation non listé dans Firebase Console, de popup bloqué en iframe, ou d'opération restreinte : création/connexion directe
-                        if(error.code === 'auth/unauthorized-domain' ||
-                           error.code === 'auth/operation-not-allowed' ||
-                           error.code === 'auth/auth-domain-config-required' ||
-                           error.code === 'auth/popup-blocked' ||
-                           error.code === 'auth/cancelled-popup-request' ||
-                           error.code === 'auth/internal-error' ||
-                           error.code === 'auth/network-request-failed' ||
-                           isInIframe) {
-                            fallbackDirectGoogleLogin();
-                            return;
-                        }
-
                         resetGoogleBtns();
-                        if(error.code === 'auth/popup-closed-by-user') {
-                            self.showGoogleAlert("Fenêtre Google fermée. Cliquez sur 'Connexion Google directe' ci-dessous si la fenêtre ne s'affiche pas.");
+                    }).catch(function(error) {
+                        clearPendingFlags();
+                        resetGoogleBtns();
+                        if(!error) return;
+
+                        console.warn("[Google Auth]", error.code || error.message);
+
+                        // Si le navigateur mobile ou desktop bloque la popup, basculer sur la redirection dans le même onglet
+                        if((error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request') && !isInIframe) {
+                            $btns.addClass('loading');
+                            $btns.find('.google-text').text("Redirection vers Google...");
+                            setPendingFlags();
+                            authInstance.signInWithRedirect(provider);
                             return;
                         }
 
-                        fallbackDirectGoogleLogin();
+                        if(error.code === 'auth/popup-closed-by-user') {
+                            self.showGoogleAlert("Authentification annulée. Sur mobile, cliquez sur 'Connexion Google directe' ci-dessous.");
+                            return;
+                        }
+
+                        if(error.code === 'auth/unauthorized-domain') {
+                            self.showGoogleAlert("Ce domaine (" + window.location.hostname + ") doit être ajouté dans Firebase Console > Authentication > Settings > Authorized domains.");
+                            return;
+                        }
+
+                        self.showGoogleAlert("Erreur Google : " + (error.message || error.code));
                     });
                 } catch(syncErr) {
-                    clearTimeout(safetyTimer);
-                    console.warn("[Google Auth Sync Fallback]", syncErr);
-                    fallbackDirectGoogleLogin();
+                    clearPendingFlags();
+                    resetGoogleBtns();
+                    self.showGoogleAlert("Erreur lors de l'ouverture de Google Auth : " + (syncErr.message || syncErr));
                 }
             };
 
@@ -466,30 +522,37 @@ define(['jquery', 'storage'], function($, Storage) {
                 try {
                     firebase.auth().getRedirectResult().then(function(result) {
                         if(result && result.user) {
-                            clearPendingFlags();
-                            result.user.getIdToken(true).then(function(idToken) {
-                                var prefName = (self.getUsernameField && self.getUsernameField().length) ? self.getUsernameField().val() : '';
-                                self.startGoogleGame(idToken, prefName || result.user.displayName);
-                            });
+                            presentGoogleNameStep(result.user);
                         }
-                    }).catch(function() {
+                    }).catch(function(err) {
                         clearPendingFlags();
+                        resetGoogleBtns();
+                        if(err && err.code && err.code !== 'auth/credential-already-in-use') {
+                            self.showGoogleAlert("Erreur au retour de Google : " + (err.message || err.code));
+                        }
                     });
                 } catch(e) {}
 
                 try {
                     firebase.auth().onAuthStateChanged(function(user) {
-                        if(user) {
-                            if(hasPendingFlags() && (!self.game || !self.game.started)) {
-                                clearPendingFlags();
-                                user.getIdToken(true).then(function(idToken) {
-                                    var prefName = (self.getUsernameField && self.getUsernameField().length) ? self.getUsernameField().val() : '';
-                                    self.startGoogleGame(idToken, prefName || user.displayName);
-                                });
-                            }
+                        if(user && hasPendingFlags() && (!self.game || !self.game.started)) {
+                            presentGoogleNameStep(user);
                         }
                     });
                 } catch(e) {}
+
+                // Au retour sur l'onglet mobile après authentification, vérifier si l'utilisateur est connecté
+                var checkOnFocus = function() {
+                    if(document.hidden || (self.game && self.game.started)) return;
+                    if(hasPendingFlags() && window.firebase && typeof firebase.auth === 'function') {
+                        var u = firebase.auth().currentUser;
+                        if(u) {
+                            presentGoogleNameStep(u);
+                        }
+                    }
+                };
+                document.addEventListener('visibilitychange', checkOnFocus);
+                window.addEventListener('focus', checkOnFocus);
             }
 
             $(document).on('click', '.google-auth-btn', function(e) {
@@ -503,6 +566,30 @@ define(['jquery', 'storage'], function($, Storage) {
                 e.preventDefault();
                 if(self.starting) return;
                 triggerGoogleAuth(true);
+            });
+
+            $(document).on('click', '#google-name-submit', function(e) {
+                e.preventDefault();
+                self.submitGoogleChosenName();
+            });
+
+            $(document).on('submit', '#google-name-form', function(e) {
+                e.preventDefault();
+                self.submitGoogleChosenName();
+            });
+
+            $(document).on('keydown', '#google-name-input', function(e) {
+                $('#google-name-input').removeClass('field-error');
+                $('#google-name-validation').empty();
+                if(e.which === 13) {
+                    e.preventDefault();
+                    self.submitGoogleChosenName();
+                }
+            });
+
+            $(document).on('click', '#google-name-cancel', function(e) {
+                e.preventDefault();
+                self.closeGoogleNameChooser();
             });
         },
 
@@ -1457,11 +1544,76 @@ define(['jquery', 'storage'], function($, Storage) {
             });
         },
 
+        detectMobileApp: function() {
+            if (typeof window === 'undefined') return false;
+            if (window.Capacitor || window.IS_NOVA_MOBILE_APP === true || typeof window.NovaMobileBridge !== 'undefined') return true;
+            var ua = (window.navigator && window.navigator.userAgent) ? window.navigator.userAgent : '';
+            if (/NovaQuestMobile|com\.universnovastudio\.novaquest/i.test(ua)) return true;
+            var search = (window.location && window.location.search) ? window.location.search : '';
+            if (/[?&]mobileApp=1\b/.test(search)) return true;
+            return false;
+        },
+
+        detectTouchDevice: function() {
+            if (typeof window === 'undefined') return false;
+            if (this.detectMobileApp()) return true;
+            if (('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0)) return true;
+            if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) return true;
+            if (this.isMobile || this.isTablet) return true;
+            var ua = (window.navigator && window.navigator.userAgent) ? window.navigator.userAgent : '';
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+        },
+
+        initMobileServerConfig: function() {
+            var self = this;
+            var defaultUrl = 'https://quest.universnovastudio.online';
+            var currentUrl = defaultUrl;
+            try {
+                if (window.NovaMobileBridge && typeof window.NovaMobileBridge.getServerUrl === 'function') {
+                    currentUrl = window.NovaMobileBridge.getServerUrl() || defaultUrl;
+                } else if (window.localStorage && localStorage.getItem('nova_mobile_server_url')) {
+                    currentUrl = localStorage.getItem('nova_mobile_server_url');
+                }
+            } catch (e) {}
+
+            window.NOVA_SERVER_URL = currentUrl;
+            var displayHost = currentUrl.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+            $('.mobile-server-host').text(displayHost);
+
+            $('.mobile-server-change-btn').unbind('click').bind('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (window.NovaMobileBridge && typeof window.NovaMobileBridge.openServerDialog === 'function') {
+                    window.NovaMobileBridge.openServerDialog();
+                    return;
+                }
+                var input = window.prompt('Adresse du serveur Nova Quest (ex: https://quest.universnovastudio.online) :', currentUrl);
+                if (input && String(input).trim()) {
+                    var normalized = String(input).trim().replace(/\/+$/, '');
+                    if (!/^https?:\/\//i.test(normalized)) {
+                        normalized = 'https://' + normalized;
+                    }
+                    try { localStorage.setItem('nova_mobile_server_url', normalized); } catch (err) {}
+                    window.NOVA_SERVER_URL = normalized;
+                    $('.mobile-server-host').text(normalized.replace(/^https?:\/\//i, ''));
+                    if (self.game && self.game.client) {
+                        var m = normalized.match(/^(https?):\/\/([^\/:]+)(?::(\d+))?/i);
+                        if (m) {
+                            self.game.client.host = m[2];
+                            self.game.client.port = m[3] ? parseInt(m[3], 10) : (m[1].toLowerCase() === 'https' ? 443 : 80);
+                        }
+                    }
+                }
+            });
+        },
+
         initMobileCombatControls: function() {
             var self = this;
+            this.isMobileApp = this.detectMobileApp();
+            this.isTouchDevice = this.detectTouchDevice();
 
             self.setPadScale = function(scalePercent) {
-                scalePercent = Math.max(70, Math.min(220, parseInt(scalePercent, 10) || 130));
+                scalePercent = Math.max(70, Math.min(220, parseInt(scalePercent, 10) || 115));
                 self.padScale = scalePercent;
                 document.documentElement.style.setProperty('--pad-scale', (scalePercent / 100).toFixed(2));
                 $('#setting-pad-scale').val(scalePercent);
@@ -1473,7 +1625,7 @@ define(['jquery', 'storage'], function($, Storage) {
             };
 
             self.setPadOpacity = function(opacityPercent) {
-                opacityPercent = Math.max(20, Math.min(100, parseInt(opacityPercent, 10) || 95));
+                opacityPercent = Math.max(20, Math.min(100, parseInt(opacityPercent, 10) || 90));
                 self.padOpacity = opacityPercent;
                 document.documentElement.style.setProperty('--pad-opacity', (opacityPercent / 100).toFixed(2));
                 $('#setting-pad-opacity').val(opacityPercent);
@@ -1487,19 +1639,39 @@ define(['jquery', 'storage'], function($, Storage) {
                 try { localStorage.setItem('nova_disable_touch_move', self.disableTouchMove ? 'true' : 'false'); } catch(e) {}
             };
 
-            // Charger préférences ou appliquer défauts
-            var savedScale = parseInt(localStorage.getItem('nova_pad_scale') || '130', 10);
-            var savedOpacity = parseInt(localStorage.getItem('nova_pad_opacity') || '95', 10);
-            var savedTouchMove = localStorage.getItem('nova_disable_touch_move') !== 'false';
+            if(this.isMobileApp) {
+                $('body').addClass('nova-mobile-app');
+                window.IS_NOVA_MOBILE_APP = true;
+                this.initMobileServerConfig();
+            }
+
+            // Charger préférences ou appliquer défauts (tap-to-move activé par défaut : disableTouchMove = false)
+            var savedScale = parseInt(localStorage.getItem('nova_pad_scale') || '115', 10);
+            var savedOpacity = parseInt(localStorage.getItem('nova_pad_opacity') || '90', 10);
+            var savedTouchMove = localStorage.getItem('nova_disable_touch_move') === 'true';
             self.setPadScale(savedScale);
             self.setPadOpacity(savedOpacity);
             self.setDisableTouchMove(savedTouchMove);
 
-            var isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || this.isMobile || this.isTablet || ($(window).width() <= 1024);
-            if(isTouchDevice) {
+            if(this.isTouchDevice) {
+                $('body').addClass('touch-device');
                 $('#mobile-controls').addClass('visible');
                 $('#touch-controls-toggle').addClass('active');
+            } else {
+                $('body').removeClass('touch-device');
+                $('#mobile-controls').removeClass('visible');
+                $('#touch-controls-toggle').removeClass('active');
             }
+
+            // Si un événement tactile survient dynamiquement sur un appareil hybride/mobile, activer l'UI tactile
+            $(window).one('touchstart', function() {
+                if(!self.isTouchDevice) {
+                    self.isTouchDevice = true;
+                    $('body').addClass('touch-device');
+                    $('#mobile-controls').addClass('visible');
+                    $('#touch-controls-toggle').addClass('active');
+                }
+            });
 
             $('#touch-controls-toggle').bind('click touchend', function(e) {
                 e.preventDefault();
@@ -1512,12 +1684,12 @@ define(['jquery', 'storage'], function($, Storage) {
             $('#pad-zoom-minus').bind('click touchend', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
-                self.setPadScale((self.padScale || 130) - 15);
+                self.setPadScale((self.padScale || 115) - 15);
             });
             $('#pad-zoom-plus').bind('click touchend', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
-                self.setPadScale((self.padScale || 130) + 15);
+                self.setPadScale((self.padScale || 115) + 15);
             });
 
             var stopAllDir = function() {
@@ -1527,60 +1699,36 @@ define(['jquery', 'storage'], function($, Storage) {
                     self.game.player.moveLeft = false;
                     self.game.player.moveRight = false;
                 }
-                $('.dpad-btn').removeClass('pressed');
                 $('#joystick-stick').css('transform', 'translate(0px, 0px)');
             };
 
-            var setDirState = function(dir, pressed) {
-                if(!self.game || !self.game.player || !self.game.started) return;
-                if(dir === 'up') self.game.player.moveUp = pressed;
-                if(dir === 'down') self.game.player.moveDown = pressed;
-                if(dir === 'left') self.game.player.moveLeft = pressed;
-                if(dir === 'right') self.game.player.moveRight = pressed;
-            };
-
-            $('.dpad-btn').bind('touchstart mousedown', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                var dir = $(this).attr('data-dir');
-                $(this).addClass('pressed');
-                setDirState(dir, true);
-            });
-
-            $('.dpad-btn').bind('touchend touchcancel mouseup mouseleave', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                var dir = $(this).attr('data-dir');
-                $(this).removeClass('pressed');
-                setDirState(dir, false);
-            });
-
-            // Glissement analogique fluide et ergonomique sur le joystick mobile
+            // Joystick virtuel analogique fluide (sans D-pad)
             var $joyZone = $('#mobile-joystick-zone');
             var lastVibratedDir = null;
             var joyDragging = false;
             var activeTouchId = null;
 
             var handleJoyMove = function(clientX, clientY) {
-                if(!self.game || !self.game.player || !self.game.started) return;
+                if(!$joyZone.length) return;
                 var rect = $joyZone[0].getBoundingClientRect();
                 var cx = rect.left + rect.width / 2;
                 var cy = rect.top + rect.height / 2;
                 var dx = clientX - cx;
                 var dy = clientY - cy;
                 var dist = Math.sqrt(dx * dx + dy * dy);
-                var maxR = 38; // Rayon de mouvement étendu et souple
+                var maxR = 42;
                 var clampedX = dist > maxR ? (dx / dist) * maxR : dx;
                 var clampedY = dist > maxR ? (dy / dist) * maxR : dy;
 
                 $('#joystick-stick').css('transform', 'translate(' + Math.round(clampedX) + 'px, ' + Math.round(clampedY) + 'px)');
 
-                var deadzone = 8;
+                if(!self.game || !self.game.player || !self.game.started) return;
+
+                var deadzone = 10;
                 var up = false, down = false, left = false, right = false;
                 var currentDir = null;
 
                 if(dist >= deadzone) {
-                    // Calcul d'angle précis (secteurs de 90° sans conflit ni blocage diagonal)
                     var deg = Math.atan2(dy, dx) * 180 / Math.PI; // -180° à +180°
                     if(deg >= -45 && deg <= 45) {
                         right = true;
@@ -1610,11 +1758,6 @@ define(['jquery', 'storage'], function($, Storage) {
                 self.game.player.moveDown = down;
                 self.game.player.moveLeft = left;
                 self.game.player.moveRight = right;
-
-                $('.dpad-up').toggleClass('pressed', up);
-                $('.dpad-down').toggleClass('pressed', down);
-                $('.dpad-left').toggleClass('pressed', left);
-                $('.dpad-right').toggleClass('pressed', right);
             };
 
             var endJoyDrag = function() {
@@ -1660,39 +1803,13 @@ define(['jquery', 'storage'], function($, Storage) {
                 }
             });
 
-            // Boutons d'action de combat à droite
+            // Bouton d'action circulaire unique à droite (attaquer, parler aux PNJ, ramasser/ouvrir coffre)
             $('#btn-mobile-attack').bind('touchstart mousedown', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
                 $(this).addClass('pressed');
                 if(self.game && self.game.started) {
-                    self.game.makePlayerAttackClosest();
-                }
-            }).bind('touchend touchcancel mouseup mouseleave', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                $(this).removeClass('pressed');
-            });
-
-            $('#btn-mobile-loot').bind('touchstart mousedown', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                $(this).addClass('pressed');
-                if(self.game && self.game.started) {
                     self.game.makePlayerInteractClosest();
-                }
-            }).bind('touchend touchcancel mouseup mouseleave', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                $(this).removeClass('pressed');
-            });
-
-            $('#btn-mobile-heal').bind('touchstart mousedown', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                $(this).addClass('pressed');
-                if(self.game && self.game.started) {
-                    self.game.useFirstHealingItem();
                 }
             }).bind('touchend touchcancel mouseup mouseleave', function(e) {
                 e.preventDefault();

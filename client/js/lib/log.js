@@ -13,9 +13,9 @@ Logger.prototype.debug = function(message) {
 
 Logger.prototype.error = function(message, stacktrace) {
     if(window.console) {
-        console.error(message);
+        console.warn(message);
         if(stacktrace && typeof printStackTrace === 'function') {
-            console.error(printStackTrace().join('\n\n'));
+            console.warn(printStackTrace().join('\n\n'));
         }
     }
 };

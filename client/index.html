@@ -16,7 +16,7 @@
         <meta http-equiv="X-UA-Compatible" content="IE=Edge;chrome=1">
         <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval' data: blob: wss: ws: https:; script-src * 'unsafe-inline' 'unsafe-eval' https: blob:; style-src * 'unsafe-inline' https:; font-src * data: https:; connect-src * wss: ws: https:;">
         <meta name="apple-mobile-web-app-capable" content="yes">
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
         <link rel="icon" type="image/png" href="img/common/favicon.png">
         <meta property="og:title" content="Nova Quest — UNIVERS NOVA STUDIO">
         <meta property="og:type" content="website">
@@ -120,6 +120,10 @@
                           <div id="back-to-login">
                               <span class="link">Déjà un héros ? Se connecter</span>
                           </div>
+                          <div class="mobile-server-bar mobile-only-ui">
+                              <span class="mobile-server-label">🌐 Serveur : <strong class="mobile-server-host">quest.universnovastudio.online</strong></span>
+                              <button type="button" class="mobile-server-change-btn">Serveur</button>
+                          </div>
                     </article>
                     <article id="loadcharacter">
           	           <h1>
@@ -146,6 +150,34 @@
                           <div class="validation-summary"></div>
                           <div id="create-new">
                               <span class="link">Nouveau sur ce serveur ? Créer un compte</span>
+                          </div>
+                          <div class="mobile-server-bar mobile-only-ui">
+                              <span class="mobile-server-label">🌐 Serveur : <strong class="mobile-server-host">quest.universnovastudio.online</strong></span>
+                              <button type="button" class="mobile-server-change-btn">Serveur</button>
+                          </div>
+                    </article>
+                    <article id="google-name-chooser" style="display:none;">
+          	           <h1>
+          	               <span class="left-ornament"></span>
+          	               Choisissez votre Pseudo
+          	               <span class="right-ornament"></span>
+                          </h1>
+                          <div class="google-verified-badge">
+                              <span class="google-icon"></span>
+                              <span id="google-verified-email">Compte Google connecté</span>
+                          </div>
+                          <p class="google-chooser-hint">Choisissez le nom de votre héros (2 à 12 caractères) :</p>
+                          <form id="google-name-form" action="none" method="get" accept-charset="utf-8" onsubmit="return false;">
+                              <label for="google-name-input" class="sr-only">Pseudo du héros</label>
+                              <input type="text" id="google-name-input" class="stroke" name="google-player-name" placeholder="Pseudo du héros (2 à 12 car.)" maxlength="12" autocomplete="off" aria-label="Pseudo du héros">
+                          </form>
+                          <div id="google-name-submit" class="google-play-btn">
+                              <span class="link">Entrer dans l'Aventure</span>
+                              <img src="img/common/spinner2.gif" class="google-play-spinner" style="display:none;">
+                          </div>
+                          <div class="validation-summary" id="google-name-validation"></div>
+                          <div id="google-name-cancel">
+                              <span class="link">Retour / Changer de compte</span>
                           </div>
                     </article>
                     <article id="confirmation">
@@ -269,7 +301,7 @@
 	                </h1>
 	                <ul>
 	                   <li><span class="icon"></span><strong>Clavier (AZERTY &amp; QWERTY) :</strong> Déplacez-vous avec <strong>Z Q S D</strong>, <strong>W A S D</strong> ou les flèches. Appuyez sur <strong>ESPACE</strong> pour attaquer le monstre/Boss le plus proche.</li>
-	                   <li><span class="icon"></span><strong>Mobile / Tablette :</strong> Utilisez le <strong>Joystick directionnel</strong> en bas à gauche pour esquiver les Boss et les boutons <strong>⚔️ Attaquer</strong>, <strong>🎁 Ramasser/Coffre</strong> et <strong>🧪 Soin</strong> en bas à droite.</li>
+	                   <li class="mobile-only-ui"><span class="icon"></span><strong>Mobile / Tablette :</strong> Utilisez le <strong>Joystick directionnel</strong> en bas à gauche pour esquiver les Boss et les boutons <strong>⚔️ Attaquer</strong>, <strong>🎁 Ramasser/Coffre</strong> et <strong>🧪 Soin</strong> en bas à droite.</li>
 	                   <li><span class="icon"></span><strong>Sac à dos (Touche B) &amp; Hub (Touche I) :</strong> Équipez vos armes/armures depuis le Sac à dos, échangez au Marché et gérez votre Guilde.</li>
 	                </ul>
 	                    <p>- cliquez n'importe où pour fermer -</p>
@@ -290,7 +322,7 @@
                             <button type="button" class="hub-tab" data-tab="market">🛒 Marché</button>
                             <button type="button" class="hub-tab" data-tab="guild">🛡️ Guilde</button>
                             <button type="button" class="hub-tab" data-tab="map">🗺️ Carte</button>
-                            <button type="button" class="hub-tab" data-tab="settings">⚙️ Réglages</button>
+                            <button type="button" class="hub-tab mobile-only-ui" data-tab="settings">⚙️ Réglages</button>
                             <button type="button" class="hub-tab" data-tab="trophies">🏆 Trophées</button>
                             <button type="button" class="hub-tab" id="hub-tab-admin" data-tab="admin" style="display:none;">⚡ Admin</button>
                         </div>
@@ -509,7 +541,7 @@
                     </div>
 
                     <!-- ONGLET RÉGLAGES (Taille Joystick, Transparence, Clic Tactile, etc.) -->
-                    <div class="hub-panel" id="hub-panel-settings" style="display:none;">
+                    <div class="hub-panel mobile-only-ui" id="hub-panel-settings" style="display:none;">
                         <h3>⚙️ Paramètres & Personnalisation des Contrôles</h3>
                         <div class="hub-settings-container">
                             <div class="hub-setting-row">
@@ -622,31 +654,17 @@
                     </div>
                 </div>
 
-                <!-- Contrôles Tactiles & Combat Mobile (Joystick + Boutons d'Action Boss) -->
+                <!-- Interface Tactile Mobile (Joystick Analogique Virtuel + Bouton d'Action Circulaire) -->
                 <div id="mobile-controls" class="clickable">
                     <div id="mobile-joystick-zone">
-                        <div class="dpad-cross">
-                            <button type="button" class="dpad-btn dpad-up" data-dir="up" title="Haut (Z)">▲</button>
-                            <button type="button" class="dpad-btn dpad-left" data-dir="left" title="Gauche (Q)">◀</button>
-                            <div id="joystick-stick" class="dpad-center">🕹️</div>
-                            <button type="button" class="dpad-btn dpad-right" data-dir="right" title="Droite (D)">▶</button>
-                            <button type="button" class="dpad-btn dpad-down" data-dir="down" title="Bas (S)">▼</button>
+                        <div id="joystick-base" class="joystick-base">
+                            <div id="joystick-stick" class="joystick-stick"></div>
                         </div>
                     </div>
                     <div id="mobile-combat-zone">
-                        <div class="mobile-sub-btns">
-                            <button type="button" id="btn-mobile-heal" class="mob-act-btn heal" title="Boire une potion / manger">
-                                <span class="mob-ico">🧪</span>
-                                <span class="mob-lbl">SOIN</span>
-                            </button>
-                            <button type="button" id="btn-mobile-loot" class="mob-act-btn loot" title="Ouvrir le coffre ou ramasser l'objet le plus proche">
-                                <span class="mob-ico">🎁</span>
-                                <span class="mob-lbl">COFFRE / LOOT</span>
-                            </button>
-                        </div>
-                        <button type="button" id="btn-mobile-attack" class="mob-act-btn attack" title="Attaquer le Boss / monstre le plus proche">
+                        <button type="button" id="btn-mobile-attack" class="mob-act-btn attack" title="Attaquer, ramasser un objet ou parler à un PNJ">
                             <span class="mob-ico">⚔️</span>
-                            <span class="mob-lbl">ATTAQUER</span>
+                            <span class="mob-lbl">ACTION</span>
                         </button>
                     </div>
                 </div>
@@ -722,10 +740,10 @@
 					<div id="weapon" title="Arme équipée"></div>
 					<div id="armor" title="Armure équipée"></div>
                     <div id="inventory-toggle" class="clickable active" title="Ouvrir / Fermer le Sac à dos (Touche B)">🎒 Sac</div>
-                    <div id="touch-controls-toggle" class="clickable" title="Afficher / Masquer le Joystick et les boutons de combat">🕹️ Pad</div>
-                    <div id="pad-zoom-minus" class="clickable pad-quick-zoom" title="Réduire la taille du Joystick (-15%)">➖</div>
-                    <div id="pad-quick-size" class="pad-size-label" title="Taille actuelle du Joystick">130%</div>
-                    <div id="pad-zoom-plus" class="clickable pad-quick-zoom" title="Agrandir la taille du Joystick (+15%)">➕</div>
+                    <div id="touch-controls-toggle" class="clickable mobile-only-ui" title="Afficher / Masquer le Joystick et les boutons de combat">🕹️ Pad</div>
+                    <div id="pad-zoom-minus" class="clickable pad-quick-zoom mobile-only-ui" title="Réduire la taille du Joystick (-15%)">➖</div>
+                    <div id="pad-quick-size" class="pad-size-label mobile-only-ui" title="Taille actuelle du Joystick">130%</div>
+                    <div id="pad-zoom-plus" class="clickable pad-quick-zoom mobile-only-ui" title="Agrandir la taille du Joystick (+15%)">➕</div>
 					<div id="notifications">
 					    <div>
 					       <span id="message1"></span>

@@ -1,0 +1,63 @@
+name: Build Nova Quest APK
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    name: Build Android APK (Capacitor)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup Java 17 (Zulu)
+        uses: actions/setup-java@v4
+        with:
+          distribution: "zulu"
+          java-version: "17"
+
+      - name: Install dependencies and Capacitor packages
+        run: |
+          npm install
+          if ! node -e "require.resolve('@capacitor/core'); require.resolve('@capacitor/cli'); require.resolve('@capacitor/android');" 2>/dev/null; then
+            npm install @capacitor/core @capacitor/cli @capacitor/android
+          fi
+          mkdir -p client/shared/js
+          cp -f shared/js/gametypes.js client/shared/js/gametypes.js
+
+      - name: Initialize or Sync Capacitor Android project
+        run: |
+          if [ ! -d "android" ]; then
+            npx cap add android
+          else
+            npx cap sync android
+          fi
+          node scripts/configure-android.js
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          if [ -f "$MANIFEST" ] && ! grep -q 'android:screenOrientation="sensorLandscape"' "$MANIFEST"; then
+            sed -i 's/<activity/<activity android:screenOrientation="sensorLandscape"/' "$MANIFEST"
+          fi
+
+      - name: Build Debug APK with Gradle
+        working-directory: android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload NovaQuest-APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NovaQuest-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
