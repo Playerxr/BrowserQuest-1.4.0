@@ -2237,9 +2237,21 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
         },
 
         getMobAt: function(x, y) {
-            var entity = this.getEntityAt(x, y);
-            if(entity && (entity instanceof Mob)) {
-                return entity;
+            if(this.map.isOutOfBounds(x, y) || !this.entityGrid) {
+                return null;
+            }
+            var entities = this.entityGrid[y] ? this.entityGrid[y][x] : null;
+            if(entities) {
+                for(var id in entities) {
+                    var entity = entities[id];
+                    if(entity && (entity instanceof Mob) && !entity.isDead) {
+                        return entity;
+                    }
+                }
+            }
+            var single = this.getEntityAt(x, y);
+            if(single && (single instanceof Mob) && !single.isDead) {
+                return single;
             }
             return null;
         },
@@ -2613,9 +2625,11 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
         click: function()
         {
             var pos = this.getMouseGridPosition();
+            var targetMob = this.getMobAt(pos.x, pos.y);
+            var isEntityClick = Boolean(targetMob || this.getEntityAt(pos.x, pos.y));
 
             var standingOnDoor = Boolean(this.player && this.map && this.map.isDoor(this.player.gridX, this.player.gridY));
-            if(!standingOnDoor && pos.x === this.previousClickPosition.x && pos.y === this.previousClickPosition.y) {
+            if(!standingOnDoor && !isEntityClick && pos.x === this.previousClickPosition.x && pos.y === this.previousClickPosition.y) {
                 return;
             } else {
                 this.previousClickPosition = pos;
@@ -2644,7 +2658,8 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
             && !this.player.isDead
             && !this.hoveringCollidingTile
             && !this.hoveringPlateauTile) {
-                entity = this.getEntityAt(pos.x, pos.y);
+                var mob = this.getMobAt(pos.x, pos.y);
+                entity = mob || this.getEntityAt(pos.x, pos.y);
 
                 if(entity instanceof Mob || (entity instanceof Player && entity !== this.player && this.player.pvpFlag && this.pvpFlag)) {
                     this.makePlayerAttack(entity);

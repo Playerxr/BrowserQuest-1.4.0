@@ -3295,20 +3295,27 @@ body:not(.nova-mobile-app) .mobile-server-bar {
    OUTIL DE DIAGNOSTIC PORTES & MAISONS (#nova-door-diag-overlay)
    ========================================================================== */
 #nova-door-diag-btn {
+    display: none !important;
+}
+
+body.dev-mode #nova-door-diag-btn {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 4px;
     margin-left: 6px;
-    padding: 1px 6px;
+    padding: 2px 7px;
     font-size: 10px;
     font-family: 'GraphicPixel', monospace, sans-serif;
     color: #fde68a;
-    background: rgba(30, 41, 59, 0.9);
-    border: 1px solid rgba(250, 204, 21, 0.55);
+    background: rgba(30, 41, 59, 0.95);
+    border: 1px solid rgba(250, 204, 21, 0.7);
     border-radius: 4px;
     cursor: pointer;
     line-height: 1.3;
     pointer-events: auto;
 }
 
-#nova-door-diag-btn:hover {
+body.dev-mode #nova-door-diag-btn:hover {
     background: #ca8a04;
     color: #000;
 }
@@ -3475,4 +3482,97 @@ body:not(.nova-mobile-app) .mobile-server-bar {
     border: 2px solid #facc15 !important;
     box-shadow: 0 0 14px rgba(250, 204, 21, 0.35);
 }
+
+/* ==========================================================================
+   APP MODE (Mode Joueur vs Mode Développeur) & SE SOUVENIR DE MOI
+   ========================================================================== */
+.app-mode-banner {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin: 0 auto 12px auto;
+    padding: 4px;
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(250, 204, 21, 0.4);
+    border-radius: 8px;
+    max-width: 320px;
+}
+
+.app-mode-btn {
+    flex: 1;
+    padding: 6px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: inherit;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+}
+
+.app-mode-btn:hover {
+    color: #f8fafc;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.app-mode-btn.active {
+    background: linear-gradient(180deg, #ca8a04, #a16207);
+    color: #ffffff;
+    border-color: #facc15;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+}
+
+.app-mode-selector-inline {
+    display: flex;
+    gap: 6px;
+}
+
+.app-mode-selector-inline .app-mode-btn {
+    padding: 6px 12px;
+    background: #1e293b;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #cbd5e1;
+}
+
+.app-mode-selector-inline .app-mode-btn.active {
+    background: #eab308;
+    color: #0f172a;
+    border-color: #facc15;
+    font-weight: bold;
+}
+
+.remember-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 8px auto 4px auto;
+}
+
+.remember-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: #334155;
+    cursor: pointer;
+    user-select: none;
+    font-weight: 500;
+}
+
+.remember-label input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+    accent-color: #ca8a04;
+    margin: 0;
+}
+
+#parchment.loadcharacter .remember-label,
+#parchment.createcharacter .remember-label {
+    color: #3b2314;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
 

@@ -90,6 +90,10 @@
 	        	        <section id="parchment" class="loadcharacter">
 	            <div class="parchment-left"></div>
 	            <div class="parchment-middle">
+                    <div class="app-mode-banner" title="Choisir le mode d'affichage">
+                        <button type="button" class="app-mode-btn active" data-mode="player">🎮 Mode Joueur</button>
+                        <button type="button" class="app-mode-btn" data-mode="dev">🛠️ Mode Développeur</button>
+                    </div>
                     <article id="createcharacter">
           	           <h1>
           	               <span class="left-ornament"></span>
@@ -117,6 +121,12 @@
                               <input type="password" id="pwinput2" class="stroke" name="player-pw2" placeholder="Confirmer mot de passe" maxlength="256" autocomplete="new-password" aria-label="Confirmer mot de passe">
                               <label for="emailinput" class="sr-only">Adresse email (facultatif)</label>
                               <input type="email" id="emailinput" class="stroke" name="player-email" placeholder="Adresse email" maxlength="48" style="display:none" aria-label="Adresse email">
+                              <div class="remember-row">
+                                  <label for="remember-me-create-checkbox" class="remember-label">
+                                      <input type="checkbox" id="remember-me-create-checkbox" checked>
+                                      <span>Se souvenir de moi</span>
+                                  </label>
+                              </div>
                           </form>
                           <div class="play">
                               <span class="link">Créer et Jouer</span>
@@ -154,6 +164,12 @@
                               <input type="text" id="loginnameinput" class="stroke" name="player-name" placeholder="Pseudo" maxlength="12" autofocus autocomplete="username" aria-label="Pseudo">
                               <label for="loginpwinput" class="sr-only">Mot de passe</label>
                               <input type="password" id="loginpwinput" class="stroke" name="player-loginpw" placeholder="Mot de passe" maxlength="256" autocomplete="current-password" aria-label="Mot de passe">
+                              <div class="remember-row">
+                                  <label for="remember-me-checkbox" class="remember-label">
+                                      <input type="checkbox" id="remember-me-checkbox" checked>
+                                      <span>Se souvenir de moi</span>
+                                  </label>
+                              </div>
                           </form>
                           <div class="play">
                               <span class="link">Jouer</span>
@@ -618,6 +634,19 @@
                                         <input type="checkbox" id="setting-disable-touch-move" checked aria-label="Désactiver le clic au sol sur mobile">
                                         <span class="hub-slider round"></span>
                                     </label>
+                                </div>
+                            </div>
+
+                            <div class="hub-setting-row">
+                                <div class="hub-setting-info">
+                                    <strong>🛠️ Mode d'Application (Joueur vs Développeur)</strong>
+                                    <p>Activez le mode Développeur pour accéder aux diagnostics de portes/maisons, inspecter les coordonnées et les logs.</p>
+                                </div>
+                                <div class="hub-setting-control">
+                                    <div class="app-mode-selector-inline">
+                                        <button type="button" class="app-mode-btn" data-mode="player">🎮 Joueur</button>
+                                        <button type="button" class="app-mode-btn" data-mode="dev">🛠️ Développeur</button>
+                                    </div>
                                 </div>
                             </div>
 

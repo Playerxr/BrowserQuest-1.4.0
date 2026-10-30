@@ -3,20 +3,31 @@ var Utils = require('./utils');
 var Formulas = {};
 
 Formulas.dmg = function (weaponLevel, armorLevel) {
-    var dealt = weaponLevel * Utils.randomInt(5, 10);
-    var absorbed = armorLevel * Utils.randomInt(1, 3);
+    var w = Number(weaponLevel);
+    if (!Number.isFinite(w) || w <= 0) {
+        w = 1;
+    }
+    var a = Number(armorLevel);
+    if (!Number.isFinite(a) || a <= 0) {
+        a = 1;
+    }
+    var dealt = w * Utils.randomInt(5, 10);
+    var absorbed = a * Utils.randomInt(1, 3);
     var dmg =  dealt - absorbed;
 
-    //console.log("abs: "+absorbed+"   dealt: "+ dealt+"   dmg: "+ (dealt - absorbed));
     if (dmg <= 0) {
-        return Utils.randomInt(0, 3);
+        return Utils.randomInt(1, 3);
     } else {
-        return dmg;
+        return Math.max(1, dmg);
     }
 };
 
 Formulas.hp = function (armorLevel) {
-    var hp = 80 + ((armorLevel - 1) * 30);
+    var a = Number(armorLevel);
+    if (!Number.isFinite(a) || a <= 0) {
+        a = 1;
+    }
+    var hp = 80 + ((a - 1) * 30);
     return hp;
 };
 

@@ -39,8 +39,10 @@ define(['jquery', 'storage'], function($, Storage) {
             this.hubState = null;
             this.initHubEvents();
             this.initGoogleAuth();
+            this.initAppMode();
+            this.initRememberMe();
 
-            if(localStorage && localStorage.data) {
+            if(localStorage && (localStorage.data || localStorage.getItem('nova_remember_username'))) {
                 this.frontPage = 'loadcharacter';
                 $('#parchment').removeClass().addClass('loadcharacter');
             } else {
@@ -85,6 +87,60 @@ define(['jquery', 'storage'], function($, Storage) {
             // (login or create new character) is currently active.
             this.getUsernameField = function() { return this.createNewCharacterFormActive() ? this.$nameinput : this.$loginnameinput; };
             this.getPasswordField = function() { return this.createNewCharacterFormActive() ? this.$pwinput : this.$loginpwinput; };
+        },
+
+        initAppMode: function() {
+            var self = this;
+            var urlParams = (typeof window !== 'undefined' && window.location && window.location.search) ? new URLSearchParams(window.location.search) : null;
+            var modeParam = urlParams ? (urlParams.get('mode') || (urlParams.get('dev') === '1' ? 'dev' : null)) : null;
+            var savedMode = modeParam || (typeof localStorage !== 'undefined' ? localStorage.getItem('nova_app_mode') : null) || 'player';
+            this.setAppMode(savedMode);
+
+            $(document).on('click', '.app-mode-btn', function(e) {
+                e.preventDefault();
+                var targetMode = $(this).attr('data-mode') || 'player';
+                self.setAppMode(targetMode);
+            });
+        },
+
+        setAppMode: function(mode) {
+            this.appMode = (mode === 'dev') ? 'dev' : 'player';
+            try {
+                if(typeof localStorage !== 'undefined') {
+                    localStorage.setItem('nova_app_mode', this.appMode);
+                }
+            } catch(e) {}
+
+            $('.app-mode-btn').removeClass('active');
+            $('.app-mode-btn[data-mode="' + this.appMode + '"]').addClass('active');
+
+            if(this.appMode === 'dev') {
+                $('body').addClass('dev-mode');
+                $('#nova-door-diag-btn').show();
+            } else {
+                $('body').removeClass('dev-mode');
+                $('#nova-door-diag-btn').hide();
+                $('#nova-door-diag-overlay').hide();
+            }
+        },
+
+        initRememberMe: function() {
+            try {
+                if(typeof localStorage === 'undefined') return;
+                var rememberMe = localStorage.getItem('nova_remember_me');
+                var savedUser = localStorage.getItem('nova_remember_username');
+                var savedPw = localStorage.getItem('nova_remember_pw');
+
+                if(rememberMe !== 'false' && savedUser) {
+                    if(this.$loginnameinput) this.$loginnameinput.val(savedUser);
+                    if(savedPw && this.$loginpwinput) this.$loginpwinput.val(savedPw);
+                    $('#remember-me-checkbox').prop('checked', true);
+                    $('#remember-me-create-checkbox').prop('checked', true);
+                } else if(rememberMe === 'false') {
+                    $('#remember-me-checkbox').prop('checked', false);
+                    $('#remember-me-create-checkbox').prop('checked', false);
+                }
+            } catch(e) {}
         },
 
         center: function() {
@@ -169,6 +225,18 @@ define(['jquery', 'storage'], function($, Storage) {
                 try {
                     this.game.run(action, function(result) {
                     if(result.success === true) {
+                        try {
+                            var isRemember = (action === 'create') ? $('#remember-me-create-checkbox').is(':checked') : $('#remember-me-checkbox').is(':checked');
+                            if(isRemember) {
+                                localStorage.setItem('nova_remember_username', username);
+                                localStorage.setItem('nova_remember_pw', userpw);
+                                localStorage.setItem('nova_remember_me', 'true');
+                            } else {
+                                localStorage.removeItem('nova_remember_username');
+                                localStorage.removeItem('nova_remember_pw');
+                                localStorage.setItem('nova_remember_me', 'false');
+                            }
+                        } catch(e) {}
                         self.start();
                     } else {
                         self.setPlayButtonState(true);
@@ -1735,6 +1803,9 @@ define(['jquery', 'storage'], function($, Storage) {
             $(document).bind('keydown.novaDoorDiag', function(e) {
                 if(e.which === 120 || e.key === 'F9') {
                     e.preventDefault();
+                    if(self.appMode !== 'dev') {
+                        self.setAppMode('dev');
+                    }
                     if(self.game && self.game.doorDiagnostics) {
                         self.game.doorDiagnostics.toggleOverlay();
                     }

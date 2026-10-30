@@ -56,6 +56,12 @@ module.exports = Player = Character.extend({
         this.pendingGuildInvites = [];
         this.admin = 0;
 
+        this.armor = Types.Entities.CLOTHARMOR;
+        this.armorLevel = 1;
+        this.avatar = Types.Entities.CLOTHARMOR;
+        this.weapon = Types.Entities.SWORD1;
+        this.weaponLevel = 1;
+
         this.chatBanEndTime = 0;
 
         this.connection.listen(function(message) {
@@ -234,7 +240,9 @@ module.exports = Player = Character.extend({
                         self.setTarget(mob);
                         self.server.broadcastAttacker(self);
                     }
-                    var dmg = Formulas.dmg(self.weaponLevel, mob.armorLevel);
+                    var wLvl = Number(self.weaponLevel) || Properties.getWeaponLevel(self.weapon) || 1;
+                    var aLvl = Number(mob.armorLevel) || Properties.getArmorLevel(mob.kind) || 1;
+                    var dmg = Formulas.dmg(wLvl, aLvl);
 
                     if(dmg > 0) {
                       if(mob.type !== "player"){
@@ -678,8 +686,8 @@ module.exports = Player = Character.extend({
     },
 
     equipArmor: function(kind) {
-        this.armor = kind;
-        this.armorLevel = Properties.getArmorLevel(kind);
+        this.armor = kind || Types.Entities.CLOTHARMOR;
+        this.armorLevel = Number(Properties.getArmorLevel(this.armor)) || 1;
     },
 
      equipAvatar: function(kind) {
@@ -691,8 +699,8 @@ module.exports = Player = Character.extend({
      },
 
     equipWeapon: function(kind) {
-        this.weapon = kind;
-        this.weaponLevel = Properties.getWeaponLevel(kind);
+        this.weapon = kind || Types.Entities.SWORD1;
+        this.weaponLevel = Number(Properties.getWeaponLevel(this.weapon)) || 1;
     },
 
     equipItem: function(itemKind, isAvatar) {
@@ -836,9 +844,9 @@ module.exports = Player = Character.extend({
       var self = this;
       self.kind = Types.Entities.WARRIOR;
       self.admin = admin;
-      self.equipArmor(Types.getKindFromString(armor));
-      self.equipAvatar(Types.getKindFromString(avatar));
-      self.equipWeapon(Types.getKindFromString(weapon));
+      self.equipArmor(Types.getKindFromString(armor) || Types.Entities.CLOTHARMOR);
+      self.equipAvatar(Types.getKindFromString(avatar) || Types.Entities.CLOTHARMOR);
+      self.equipWeapon(Types.getKindFromString(weapon) || Types.Entities.SWORD1);
       for(var idx = 0; idx < 6; idx++) {
           self.inventory[idx] = inventory[idx] ? Types.getKindFromString(inventory[idx]) : null;
           self.inventoryCount[idx] = inventoryNumber[idx] || 0;

@@ -326,35 +326,44 @@ define(['jquery', 'app', 'entrypoint'], function($, App, EntryPoint) {
             $('#emailinput').val('');
             $('#chatbox').val('');
 
-            var isPadActiveOnMobile = function() {
-                return Boolean(app && app.disableTouchMove === true && $('#mobile-controls').hasClass('visible'));
+            var isPadActiveOnMobile = function(pos) {
+                if(!app || app.disableTouchMove !== true || !$('#mobile-controls').hasClass('visible')) {
+                    return false;
+                }
+                if(pos && game) {
+                    if(game.getMobAt(pos.x, pos.y) || game.getNpcAt(pos.x, pos.y) || game.getChestAt(pos.x, pos.y) || game.getItemAt(pos.x, pos.y)) {
+                        return false;
+                    }
+                }
+                return true;
             };
 
             if(game.renderer.mobile || game.renderer.tablet) {
                 $('#foreground').bind('touchstart', function(event) {
-                    // Si le joystick virtuel est actif, le clic au sol est désactivé sur mobile (contrôle 100% au Pad)
-                    if(isPadActiveOnMobile()) {
+                    app.center();
+                    app.setMouseCoordinates(event.originalEvent.touches[0]);
+                    var pos = (game && game.getMouseGridPosition) ? game.getMouseGridPosition() : null;
+                    if(isPadActiveOnMobile(pos)) {
                         app.hideWindows();
                         return false;
                     }
-                    app.center();
-                    app.setMouseCoordinates(event.originalEvent.touches[0]);
                     game.click();
                     app.hideWindows();
                 });
             } else {
                 $('#foreground').click(function(event) {
-                    if(isPadActiveOnMobile()) {
+                    app.center();
+                    app.setMouseCoordinates(event);
+                    var pos = (game && game.getMouseGridPosition) ? game.getMouseGridPosition() : null;
+                    if(isPadActiveOnMobile(pos)) {
                         app.hideWindows();
                         return false;
                     }
-                    app.center();
-                    app.setMouseCoordinates(event);
-                     if(game && !app.dropDialogPopuped) {
-                	    game.pvpFlag = event.shiftKey;
-                	    game.click();
-                	}
-                   app.hideWindows();
+                    if(game && !app.dropDialogPopuped) {
+                        game.pvpFlag = event.shiftKey;
+                        game.click();
+                    }
+                    app.hideWindows();
                 });
             }
 
