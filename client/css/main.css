@@ -2583,8 +2583,31 @@ html, body {
     margin: 6px auto 4px auto !important;
     max-width: 390px;
 }
-.google-auth-btn,
+.google-auth-btn {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 12px !important;
+    font-weight: bold;
+    cursor: pointer !important;
+    margin: 0 !important;
+    min-width: 210px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    text-shadow: none !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    transition: all 0.2s ease;
+    background: #ffffff !important;
+    color: #3c4043 !important;
+    border: 2px solid #5d3a1a !important;
+}
 .play-games-auth-btn {
+    display: none !important;
+}
+body.native-app .play-games-auth-btn {
     display: inline-flex !important;
     align-items: center;
     justify-content: center;
@@ -2601,13 +2624,6 @@ html, body {
     user-select: none !important;
     -webkit-user-select: none !important;
     transition: all 0.2s ease;
-}
-.google-auth-btn {
-    background: #ffffff !important;
-    color: #3c4043 !important;
-    border: 2px solid #5d3a1a !important;
-}
-.play-games-auth-btn {
     background: linear-gradient(180deg, #10b981 0%, #047857 100%) !important;
     color: #ffffff !important;
     border: 2px solid #064e3b !important;
@@ -3484,64 +3500,8 @@ body.dev-mode #nova-door-diag-btn:hover {
 }
 
 /* ==========================================================================
-   APP MODE (Mode Joueur vs Mode Développeur) & SE SOUVENIR DE MOI
+   SE SOUVENIR DE MOI (REMEMBER ME)
    ========================================================================== */
-.app-mode-banner {
-    display: flex;
-    justify-content: center;
-    gap: 8px;
-    margin: 0 auto 12px auto;
-    padding: 4px;
-    background: rgba(15, 23, 42, 0.85);
-    border: 1px solid rgba(250, 204, 21, 0.4);
-    border-radius: 8px;
-    max-width: 320px;
-}
-
-.app-mode-btn {
-    flex: 1;
-    padding: 6px 10px;
-    font-size: 11px;
-    font-weight: 600;
-    font-family: inherit;
-    border: 1px solid transparent;
-    border-radius: 6px;
-    background: transparent;
-    color: #94a3b8;
-    cursor: pointer;
-    transition: all 0.15s ease-in-out;
-}
-
-.app-mode-btn:hover {
-    color: #f8fafc;
-    background: rgba(255, 255, 255, 0.08);
-}
-
-.app-mode-btn.active {
-    background: linear-gradient(180deg, #ca8a04, #a16207);
-    color: #ffffff;
-    border-color: #facc15;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
-}
-
-.app-mode-selector-inline {
-    display: flex;
-    gap: 6px;
-}
-
-.app-mode-selector-inline .app-mode-btn {
-    padding: 6px 12px;
-    background: #1e293b;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    color: #cbd5e1;
-}
-
-.app-mode-selector-inline .app-mode-btn.active {
-    background: #eab308;
-    color: #0f172a;
-    border-color: #facc15;
-    font-weight: bold;
-}
 
 .remember-row {
     display: flex;

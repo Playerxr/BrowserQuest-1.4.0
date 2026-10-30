@@ -39,7 +39,6 @@ define(['jquery', 'storage'], function($, Storage) {
             this.hubState = null;
             this.initHubEvents();
             this.initGoogleAuth();
-            this.initAppMode();
             this.initRememberMe();
 
             if(localStorage && (localStorage.data || localStorage.getItem('nova_remember_username'))) {
@@ -89,38 +88,20 @@ define(['jquery', 'storage'], function($, Storage) {
             this.getPasswordField = function() { return this.createNewCharacterFormActive() ? this.$pwinput : this.$loginpwinput; };
         },
 
-        initAppMode: function() {
-            var self = this;
-            var urlParams = (typeof window !== 'undefined' && window.location && window.location.search) ? new URLSearchParams(window.location.search) : null;
-            var modeParam = urlParams ? (urlParams.get('mode') || (urlParams.get('dev') === '1' ? 'dev' : null)) : null;
-            var savedMode = modeParam || (typeof localStorage !== 'undefined' ? localStorage.getItem('nova_app_mode') : null) || 'player';
-            this.setAppMode(savedMode);
-
-            $(document).on('click', '.app-mode-btn', function(e) {
-                e.preventDefault();
-                var targetMode = $(this).attr('data-mode') || 'player';
-                self.setAppMode(targetMode);
-            });
-        },
-
-        setAppMode: function(mode) {
-            this.appMode = (mode === 'dev') ? 'dev' : 'player';
-            try {
-                if(typeof localStorage !== 'undefined') {
-                    localStorage.setItem('nova_app_mode', this.appMode);
-                }
-            } catch(e) {}
-
-            $('.app-mode-btn').removeClass('active');
-            $('.app-mode-btn[data-mode="' + this.appMode + '"]').addClass('active');
-
-            if(this.appMode === 'dev') {
+        updateAdminStatus: function(isAdmin) {
+            this.isAdmin = Boolean(isAdmin);
+            if(this.isAdmin) {
                 $('body').addClass('dev-mode');
+                $('#hub-tab-admin').show();
                 $('#nova-door-diag-btn').show();
             } else {
                 $('body').removeClass('dev-mode');
+                $('#hub-tab-admin').hide();
                 $('#nova-door-diag-btn').hide();
                 $('#nova-door-diag-overlay').hide();
+                if($('#hub-panel-admin').hasClass('active')) {
+                    $('.hub-tab[data-tab="bag"]').click();
+                }
             }
         },
 
@@ -442,6 +423,24 @@ define(['jquery', 'storage'], function($, Storage) {
             var self = this;
 
             try { localStorage.removeItem('nova_google_fallback_uid'); } catch(e) {}
+
+            // Google Play Jeux est réservé à l'application mobile native (Android APK / Capacitor).
+            // Sur navigateur web (desktop & mobile), il est masqué pour garantir une présentation soignée et professionnelle.
+            var isNativeApp = Boolean(
+                (typeof window !== 'undefined' && window.Capacitor) ||
+                (typeof window !== 'undefined' && window.IS_NOVA_MOBILE_APP === true) ||
+                (typeof window !== 'undefined' && typeof window.NovaMobileBridge !== 'undefined') ||
+                (typeof window !== 'undefined' && window.location && (window.location.protocol === 'capacitor:' || window.location.protocol === 'file:')) ||
+                (typeof navigator !== 'undefined' && /NovaQuestMobile|wv|Capacitor/i.test(navigator.userAgent))
+            );
+
+            if(isNativeApp) {
+                $('body').addClass('native-app');
+                $('.play-games-auth-btn').show();
+            } else {
+                $('body').removeClass('native-app');
+                $('.play-games-auth-btn').hide();
+            }
 
             var resetGoogleBtns = function() {
                 if(self._mobilePollTimer) {
@@ -1756,6 +1755,10 @@ define(['jquery', 'storage'], function($, Storage) {
             $('#nova-door-diag-btn').click(function(e) {
                 e.preventDefault();
                 e.stopPropagation();
+                var isDev = Boolean(self.isAdmin || (self.game && self.game.player && self.game.player.admin === 1));
+                if(!isDev) {
+                    return;
+                }
                 if(self.game && self.game.doorDiagnostics) {
                     self.game.doorDiagnostics.toggleOverlay();
                 }
@@ -1803,8 +1806,9 @@ define(['jquery', 'storage'], function($, Storage) {
             $(document).bind('keydown.novaDoorDiag', function(e) {
                 if(e.which === 120 || e.key === 'F9') {
                     e.preventDefault();
-                    if(self.appMode !== 'dev') {
-                        self.setAppMode('dev');
+                    var isDev = Boolean(self.isAdmin || (self.game && self.game.player && self.game.player.admin === 1));
+                    if(!isDev) {
+                        return; // Outil réservé aux administrateurs/développeurs activés via le panel admin
                     }
                     if(self.game && self.game.doorDiagnostics) {
                         self.game.doorDiagnostics.toggleOverlay();

@@ -883,6 +883,9 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
                 // sanitize and shorten names exceeding the allowed length.
                 self.player.name = name;
                 self.player.admin = (admin === 1) ? 1 : 0;
+                if(self.app && typeof self.app.updateAdminStatus === 'function') {
+                    self.app.updateAdminStatus(self.player.admin === 1);
+                }
                 self.player.setGridPosition(x, y);
                 self._lastSentMoveX = x;
                 self._lastSentMoveY = y;
