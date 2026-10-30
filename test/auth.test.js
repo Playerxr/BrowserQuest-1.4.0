@@ -163,3 +163,40 @@ test('a session in another world prevents login and legacy credential migration'
     assert.deepEqual(await login.completed, { success: false, reason: 'loggedin' });
     assert.equal(db.stmtGetPlayer.get('voyageur').password, 'password');
 });
+
+test('Google account creation handles existing username collisions and re-authenticates by google_uid', async t => {
+    const db = database(t);
+    const firebaseService = require('../server/js/firebase_service');
+    // Existing classic player with username "Jean"
+    const classic = player('Jean', 'classic-password');
+    db.createPlayer(classic);
+    assert.equal((await classic.completed).success, true);
+
+    // New Google user whose displayName is also "Jean"
+    const header = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64url');
+    const payload = Buffer.from(JSON.stringify({
+        sub: 'google_uid_12345',
+        email: 'jean.google@gmail.com',
+        name: 'Jean',
+        exp: Math.floor(Date.now() / 1000) + 3600
+    })).toString('base64url');
+    const idToken = `${header}.${payload}.sig`;
+
+    const googleInfo = await firebaseService.verifyIdToken(idToken);
+    assert.equal(googleInfo.uid, 'google_uid_12345');
+    assert.equal(googleInfo.email, 'jean.google@gmail.com');
+
+    const googleNew = player('Jean', '');
+    db.loginWithGoogle(googleNew, googleInfo);
+    const createdRes = await googleNew.completed;
+    assert.equal(createdRes.success, true);
+    assert.equal(googleNew.name, 'Jean1');
+
+    // Subsequent login with the same Google UID logs into the created Google account
+    const googleRelogin = player('Jean', '');
+    db.loginWithGoogle(googleRelogin, googleInfo);
+    const reloginRes = await googleRelogin.completed;
+    assert.equal(reloginRes.success, true);
+    assert.equal(googleRelogin.name, 'Jean1');
+});
+

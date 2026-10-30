@@ -74,9 +74,17 @@ function(Camera, Item, Character, Player, Timer) {
 
             this.createCamera();
 
-            this.context.mozImageSmoothingEnabled = false;
-            this.background.mozImageSmoothingEnabled = false;
-            this.foreground.mozImageSmoothingEnabled = false;
+            var disableSmoothing = function(ctx) {
+                if(!ctx) return;
+                ctx.imageSmoothingEnabled = false;
+                if('webkitImageSmoothingEnabled' in ctx) ctx.webkitImageSmoothingEnabled = false;
+                if('mozImageSmoothingEnabled' in ctx) ctx.mozImageSmoothingEnabled = false;
+                if('msImageSmoothingEnabled' in ctx) ctx.msImageSmoothingEnabled = false;
+            };
+
+            disableSmoothing(this.context);
+            disableSmoothing(this.background);
+            disableSmoothing(this.foreground);
 
             this.initFont();
             this.initFPS();

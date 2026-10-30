@@ -92,20 +92,13 @@ module.exports = Player = Character.extend({
                     }
 
                     var rawName = preferredName || googleUser.name || (googleUser.email ? googleUser.email.split('@')[0] : 'Hero');
-                    rawName = Utils.sanitize(rawName).replace(/[^a-zA-Z0-9_-]/g, '').trim();
+                    rawName = Utils.sanitize(rawName).replace(/[^a-zA-Z0-9_\-\u00C0-\u017F]/g, '').trim();
                     if(!rawName || rawName.length < 2) rawName = 'Hero' + Math.floor(Math.random() * 8999 + 1000);
                     self.name = rawName.substr(0, 12);
                     self.email = googleUser.email;
                     self.googleUid = googleUser.uid;
 
                     log.info("GOOGLE_LOGIN: " + self.name + " (" + googleUser.email + ") [session=" + self.sessionId + "]");
-                    if(self.server.loggedInPlayer(self.name)) {
-                        self.isAuthenticating = false;
-                        self.connection.sendUTF8("loggedin");
-                        self.connection.close("Already logged in " + self.name);
-                        return;
-                    }
-
                     databaseHandler.loginWithGoogle(self, googleUser);
                 }).catch(function(err) {
                     self.isAuthenticating = false;

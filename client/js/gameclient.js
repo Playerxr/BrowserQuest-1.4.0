@@ -685,7 +685,7 @@ define(['player', 'entityfactory', 'lib/bison'], function(Player, EntityFactory,
         },
 
         sendGoogleLogin: function(idToken, preferredName) {
-            var safePref = preferredName ? String(preferredName).replace(/[^a-zA-Z0-9_-]/g, '').trim().substr(0, 32) : "";
+            var safePref = preferredName ? String(preferredName).replace(/[^a-zA-Z0-9_\-\u00C0-\u017F]/g, '').trim().substr(0, 32) : "";
             this.sendMessage([Types.Messages.GOOGLE_LOGIN,
                               idToken,
                               safePref]);

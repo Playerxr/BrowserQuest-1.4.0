@@ -24,26 +24,29 @@ define(['jquery', 'animation', 'sprites'], function($, Animation, sprites) {
         },
 
         load: function() {
-            var self = this;
+            var self = this,
+                retriedWithoutCors = false;
 
             this.image = new Image();
             this.image.crossOrigin = "Anonymous";
             this.image.onload = function() {
                 self.isLoaded = true;
+                self.loadError = undefined;
 
                 if(self.onload_func) {
                     self.onload_func();
                 }
             };
             this.image.onerror = function() {
-                if(self.image.crossOrigin) {
+                if(!retriedWithoutCors) {
+                    retriedWithoutCors = true;
                     self.image.crossOrigin = null;
                     self.image.src = self.filepath;
                     return;
                 }
                 self.loadError = 'Impossible de charger ' + self.filepath + '. Rechargez la page puis réessayez.';
             };
-            this.image.src = this.filepath;
+            this.image.src = self.filepath;
         },
 
         createAnimations: function() {

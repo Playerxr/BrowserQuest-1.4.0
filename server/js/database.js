@@ -318,13 +318,20 @@ module.exports = DatabaseHandler = cls.Class.extend({
     loginWithGoogle: function(player, googleInfo) {
         var self = this;
         var existing = null;
+
+        // 1. Chercher par Google UID
         if(googleInfo && googleInfo.uid) {
             try {
                 existing = this.stmtGetPlayerByGoogleUid.get(googleInfo.uid);
             } catch(e) {}
         }
-        if(!existing && player.name) {
-            existing = this.stmtGetPlayer.get(player.name);
+
+        // 2. Chercher par Email si non trouvé par UID
+        if(!existing && googleInfo && googleInfo.email) {
+            try {
+                var stmtEmail = this.db.prepare("SELECT * FROM players WHERE email = ?");
+                existing = stmtEmail.get(googleInfo.email);
+            } catch(e) {}
         }
 
         if(existing) {
@@ -345,12 +352,17 @@ module.exports = DatabaseHandler = cls.Class.extend({
             } catch(e) {}
             self._loadVerifiedPlayer(player, existing);
         } else {
-            var candidateName = player.name || 'Hero';
-            if(this.stmtGetPlayer.get(candidateName)) {
-                candidateName = ('Hero' + Math.floor(Math.random() * 8999 + 1000)).substr(0, 12);
-                while(this.stmtGetPlayer.get(candidateName)) {
-                    candidateName = ('Hero' + Math.floor(Math.random() * 8999 + 1000)).substr(0, 12);
-                }
+            // Création d'un nouveau compte Google
+            var baseName = (player.name && player.name !== 'Hero' && player.name.length >= 2) ? player.name : (googleInfo && googleInfo.name ? googleInfo.name : 'Hero');
+            baseName = String(baseName).replace(/[^a-zA-Z0-9_\-\u00C0-\u017F]/g, '').trim();
+            if(!baseName || baseName.length < 2) baseName = 'Hero';
+
+            var candidateName = baseName.substr(0, 12);
+            var counter = 1;
+            while(this.stmtGetPlayer.get(candidateName)) {
+                var suffix = String(counter++);
+                var availLen = 12 - suffix.length;
+                candidateName = baseName.substr(0, availLen) + suffix;
             }
             player.name = candidateName;
 
