@@ -194,8 +194,8 @@ WS.MultiVersionWebsocketServer = Server.extend({
         }
 
         this._httpServer = http.createServer(app);
-        this._httpServer.listen(port, function () {
-            log.info('Serveur (HTTP + WebSocket) en écoute sur port ' + port + ' (IPv4 + IPv6)');
+        this._httpServer.listen(port, '0.0.0.0', function () {
+            log.info('Serveur (HTTP + WebSocket) en écoute sur port ' + port + ' (0.0.0.0)');
         });
 
         this._wss = new WebSocketServer({ server: this._httpServer, maxPayload: MAX_PAYLOAD });

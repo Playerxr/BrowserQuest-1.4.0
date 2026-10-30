@@ -19,6 +19,8 @@
         "redis": "^0.12.1"
     },
     "scripts": {
+        "dev": "node server/js/main.js",
+        "build": "echo 'No build step required'",
         "start": "node server/js/main.js",
         "playtest": "node run_playtest.js",
         "test": "node --test --test-concurrency=1 test/*.test.js",
