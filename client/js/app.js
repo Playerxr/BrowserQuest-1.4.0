@@ -992,11 +992,13 @@ define(['jquery', 'storage'], function($, Storage) {
         initHealthBar: function() {
             var self = this;
             var updateHpWidth = function(hp, maxHp) {
-                var scale = (self.game && self.game.renderer) ? self.game.renderer.getScaleFactor() : 2;
-                var hbWidth = $("#healthbar").width() || 120;
-                var isCompactMobileBar = ($(window).width() <= 1000) || $('body').hasClass('touch-device');
-                var inset = isCompactMobileBar ? 4 : (12 * scale);
-                var healthMaxWidth = Math.max(40, hbWidth - inset);
+                var hbWidth = $("#healthbar").width() || 204;
+                var hitLeft = parseInt($("#hitpoints").css('left'), 10);
+                if (isNaN(hitLeft) || hitLeft <= 0) {
+                    hitLeft = hbWidth >= 300 ? 33 : (hbWidth >= 180 ? 22 : 11);
+                }
+                var rightPad = hbWidth >= 300 ? 3 : (hbWidth >= 180 ? 2 : 1);
+                var healthMaxWidth = Math.max(40, hbWidth - hitLeft - rightPad);
                 var safeMax = (maxHp && maxHp > 0) ? maxHp : 1;
                 var safeHp = (hp && hp > 0) ? Math.min(hp, safeMax) : 0;
                 var barWidth = Math.round((healthMaxWidth / safeMax) * safeHp);
@@ -1185,8 +1187,30 @@ define(['jquery', 'storage'], function($, Storage) {
         },
 
         toggleInventory: function() {
-            $('#nova-inventory').toggleClass('collapsed');
-            $('#inventory-toggle').toggleClass('active');
+            var $hub = $('#nova-hub');
+            var isBagActive = $hub.hasClass('active') && $('#hub-panel-bag').hasClass('active');
+            if(isBagActive) {
+                $hub.removeClass('active');
+                $('#achievementsbutton').removeClass('active');
+            } else {
+                if($('#instructions').hasClass('active')) {
+                    this.toggleInstructions();
+                    $('#helpbutton').removeClass('active');
+                }
+                if($('#achievements').hasClass('active')) {
+                    this.resetPage();
+                    $('#achievements').removeClass('active');
+                }
+                $('.hub-tab').removeClass('active');
+                $('.hub-tab[data-tab="bag"]').addClass('active');
+                $('.hub-panel').removeClass('active').hide();
+                $('#hub-panel-bag').addClass('active').show();
+                $hub.addClass('active');
+                $('#achievementsbutton').addClass('active');
+                if(this.game && this.game.client) {
+                    this.game.client.sendHub('refresh', {});
+                }
+            }
         },
 
         hideWindows: function() {

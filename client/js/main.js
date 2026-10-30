@@ -630,8 +630,8 @@ define(['jquery', 'app', 'entrypoint'], function($, App, EntryPoint) {
                 }
             });
 
-            // Gestion de l'inventaire Nova Quest (6 emplacements)
-            $('#inventory-toggle').click(function(e) {
+            // Gestion de l'inventaire Nova Quest (ouverture via les cases Arme/Armure ou le bouton Hub)
+            $('#inventory-toggle, #weapon, #armor').click(function(e) {
                 e.stopPropagation();
                 app.toggleInventory();
             });
