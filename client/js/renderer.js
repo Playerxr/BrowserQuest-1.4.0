@@ -197,6 +197,9 @@ function(Camera, Item, Character, Player, Timer) {
         },
 
         drawTargetCell: function() {
+            if(this.mobile || this.tablet || !this.game.hasMouseMoved) {
+                return;
+            }
             var mouse = this.game.getMouseGridPosition();
 
             if(this.game.targetCellVisible && !(mouse.x === this.game.selectedX && mouse.y === this.game.selectedY)) {
@@ -372,9 +375,7 @@ function(Camera, Item, Character, Player, Timer) {
                     this.context.globalAlpha = entity.fadingAlpha;
                 }
 
-                if(!this.mobile && !this.tablet) {
-                    this.drawEntityName(entity);
-                }
+                this.drawEntityName(entity);
 
                 this.context.save();
                 if(entity.flipSpriteX) {
@@ -819,13 +820,15 @@ function(Camera, Item, Character, Player, Timer) {
         },
 
         renderStaticCanvases: function() {
+            this.clearScreen(this.background);
+            this.drawBackground(this.background, "#11100d");
             this.background.save();
                 this.setCameraView(this.background);
                 this.drawTerrain();
             this.background.restore();
 
+            this.clearScreen(this.foreground);
             if(this.mobile || this.tablet) {
-                this.clearScreen(this.foreground);
                 this.foreground.save();
                     this.setCameraView(this.foreground);
                     this.drawHighTiles(this.foreground);
@@ -834,12 +837,93 @@ function(Camera, Item, Character, Player, Timer) {
         },
 
         renderFrame: function() {
-            if(this.mobile || this.tablet) {
-                this.renderFrameMobile();
+            this.renderFrameDesktop();
+        },
+
+        isHouseInteriorPosition: function(gx, gy) {
+            if(gx >= 145 && gx <= 168 && gy >= 270 && gy <= 292) {
+                return false;
             }
-            else {
-                this.renderFrameDesktop();
+            if(gx >= 115 && gy >= 60) {
+                return true;
             }
+            if(gy >= 265) {
+                return true;
+            }
+            return false;
+        },
+
+        drawIndoorDoorIndicators: function() {
+            if(!this.game || !this.game.started || !this.game.player || !this.game.map || !this.game.map.doors) {
+                return;
+            }
+            var p = this.game.player;
+            if(!this.isHouseInteriorPosition(p.gridX, p.gridY)) {
+                return;
+            }
+
+            var self = this,
+                ctx = this.context,
+                s = this.scale,
+                ts = this.tilesize,
+                cam = this.camera,
+                now = this.game.currentTime || Date.now(),
+                pulse = 0.55 + 0.35 * Math.sin(now / 220),
+                bobOffset = Math.round(Math.sin(now / 200) * 2);
+
+            _.each(this.game.map.doors, function(door, tileIndexStr) {
+                var doorX = (typeof door.doorX === 'number') ? door.doorX : (getX(parseInt(tileIndexStr, 10) + 1, self.game.map.width)),
+                    doorY = (typeof door.doorY === 'number') ? door.doorY : (Math.floor(parseInt(tileIndexStr, 10) / self.game.map.width));
+
+                if(!cam.isVisiblePosition(doorX, doorY)) {
+                    return;
+                }
+
+                var px = doorX * ts * s,
+                    py = doorY * ts * s,
+                    tileW = ts * s,
+                    tileH = ts * s;
+
+                ctx.save();
+                ctx.fillStyle = "rgba(250, 204, 21, " + (0.18 * pulse).toFixed(3) + ")";
+                ctx.fillRect(px + 2, py + 2, tileW - 4, tileH - 4);
+
+                ctx.strokeStyle = "rgba(250, 204, 21, " + (0.85 * pulse).toFixed(3) + ")";
+                ctx.lineWidth = Math.max(2, s);
+                ctx.strokeRect(px + 2, py + 2, tileW - 4, tileH - 4);
+
+                var labelX = px + (tileW / 2),
+                    labelY = py - (4 * s) + bobOffset;
+                ctx.font = "bold " + Math.max(10, 5 * s) + "px GraphicPixel, sans-serif";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "bottom";
+                ctx.lineWidth = Math.max(3, s + 1);
+                ctx.strokeStyle = "rgba(15, 23, 42, 0.92)";
+                ctx.strokeText("▼ SORTIE", labelX, labelY);
+                ctx.fillStyle = "#fde047";
+                ctx.fillText("▼ SORTIE", labelX, labelY);
+                ctx.restore();
+            });
+        },
+
+        drawDoorTransitionFade: function() {
+            if(!this.game || !this.game.doorFadeStartTime) {
+                return;
+            }
+            var duration = this.game.doorFadeDuration || 180,
+                elapsed = Date.now() - this.game.doorFadeStartTime;
+            if(elapsed >= duration || elapsed < 0) {
+                this.game.doorFadeStartTime = 0;
+                return;
+            }
+            var progress = elapsed / duration,
+                alpha = (1 - progress) * 0.42,
+                ctx = this.context;
+
+            ctx.save();
+            ctx.fillStyle = "rgba(15, 23, 42, " + alpha.toFixed(3) + ")";
+            ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            ctx.restore();
         },
 
         renderFrameDesktop: function() {
@@ -856,6 +940,7 @@ function(Camera, Item, Character, Player, Timer) {
 
                 //this.drawOccupiedCells();
                 this.drawPathingCells();
+                this.drawIndoorDoorIndicators();
                 this.drawEntities();
                 this.drawProjectiles();
                 this.drawCombatInfo();
@@ -863,6 +948,7 @@ function(Camera, Item, Character, Player, Timer) {
             this.context.restore();
 
             // Overlay UI elements
+            this.drawDoorTransitionFade();
             if(this.game.cursorVisible)
                 this.drawCursor();
 
@@ -878,9 +964,12 @@ function(Camera, Item, Character, Player, Timer) {
 
                 this.drawDirtyAnimatedTiles();
                 this.drawSelectedCell();
+                this.drawIndoorDoorIndicators();
                 this.drawDirtyEntities();
                 this.drawProjectiles();
             this.context.restore();
+
+            this.drawDoorTransitionFade();
         },
 
         preventFlickeringBug: function() {

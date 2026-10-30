@@ -2573,27 +2573,44 @@ html, body {
     margin: 8px auto;
 }
 
-/* Bouton de Connexion Google & Séparateur */
-.google-auth-btn {
+/* Boutons de Connexion Google & Google Play Jeux + Séparateur */
+.auth-buttons-row {
     display: flex !important;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    background: #ffffff !important;
-    color: #3c4043 !important;
-    border: 2px solid #5d3a1a !important;
+    gap: 8px;
+    margin: 6px auto 4px auto !important;
+    max-width: 390px;
+}
+.google-auth-btn,
+.play-games-auth-btn {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
     border-radius: 6px;
-    padding: 7px 14px;
-    font-size: 13px !important;
+    padding: 6px 11px;
+    font-size: 12px !important;
     font-weight: bold;
     cursor: pointer !important;
-    margin: 8px auto !important;
-    width: 220px;
+    margin: 0 !important;
+    min-width: 172px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     text-shadow: none !important;
     user-select: none !important;
     -webkit-user-select: none !important;
     transition: all 0.2s ease;
+}
+.google-auth-btn {
+    background: #ffffff !important;
+    color: #3c4043 !important;
+    border: 2px solid #5d3a1a !important;
+}
+.play-games-auth-btn {
+    background: linear-gradient(180deg, #10b981 0%, #047857 100%) !important;
+    color: #ffffff !important;
+    border: 2px solid #064e3b !important;
 }
 .google-auth-btn:hover {
     background: #f1f3f4 !important;
@@ -2601,14 +2618,28 @@ html, body {
     box-shadow: 0 4px 8px rgba(0,0,0,0.45);
     transform: translateY(-1px);
 }
-.google-auth-btn:active {
+.play-games-auth-btn:hover {
+    background: linear-gradient(180deg, #34d399 0%, #059669 100%) !important;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.45);
+    transform: translateY(-1px);
+}
+.google-auth-btn:active,
+.play-games-auth-btn:active {
     transform: translateY(1px);
     box-shadow: 0 1px 2px rgba(0,0,0,0.3);
 }
 .google-auth-btn .google-icon {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath fill='%23EA4335' d='M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z'/%3E%3Cpath fill='%234285F4' d='M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z'/%3E%3Cpath fill='%23FBBC05' d='M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.79l7.97-6.2z'/%3E%3Cpath fill='%2334A853' d='M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z'/%3E%3C/svg%3E") no-repeat center center;
+    background-size: contain;
+    display: inline-block;
+    flex-shrink: 0;
+}
+.play-games-auth-btn .play-games-icon {
+    width: 17px;
+    height: 17px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff'%3E%3Cpath d='M17.5 7H6.5C4.01 7 2 9.01 2 11.5S4.01 16 6.5 16h1.22l1.8-2.25c.28-.35.7-.55 1.15-.55h2.66c.45 0 .87.2 1.15.55L16.28 16h1.22c2.49 0 4.5-2.01 4.5-4.5S19.99 7 17.5 7zM8 12.5H6.5V14H5.5v-1.5H4v-1h1.5V10h1v1.5H8v1zm7.25.75c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm2-2c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z'/%3E%3C/svg%3E") no-repeat center center;
     background-size: contain;
     display: inline-block;
     flex-shrink: 0;
@@ -2616,6 +2647,10 @@ html, body {
 .google-auth-btn .google-text {
     color: #3c4043 !important;
     text-shadow: none !important;
+}
+.play-games-auth-btn .play-games-text {
+    color: #ffffff !important;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.45) !important;
 }
 .auth-divider {
     display: flex !important;
@@ -2636,13 +2671,14 @@ html, body {
     font-weight: bold;
     text-shadow: none !important;
 }
-.google-auth-btn.loading {
+.google-auth-btn.loading,
+.play-games-auth-btn.loading {
     opacity: 0.85;
     pointer-events: none;
-    background: #e8eaed !important;
     cursor: wait !important;
 }
-.google-auth-btn.loading .google-icon {
+.google-auth-btn.loading .google-icon,
+.play-games-auth-btn.loading .play-games-icon {
     -webkit-animation: googleSpin 1s infinite linear;
     animation: googleSpin 1s infinite linear;
 }
@@ -2800,6 +2836,425 @@ body.started #google-name-chooser {
 }
 
 /* ==========================================================================
+   HUD DE PING EN TEMPS RÉEL (ms) & ALIGNEMENT HUD MOBILE
+   ========================================================================== */
+#nova-ping-hud {
+    position: absolute;
+    top: 12px;
+    left: 128px;
+    z-index: 45;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(15, 23, 42, 0.88);
+    border: 1.5px solid #ca8a04;
+    border-radius: 8px;
+    padding: 4px 10px;
+    font-family: 'GraphicPixel', monospace, sans-serif;
+    font-size: 11px;
+    font-weight: bold;
+    color: #f8fafc;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.65);
+    pointer-events: auto;
+    user-select: none;
+}
+#nova-ping-hud .ping-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #22c55e;
+    box-shadow: 0 0 6px #22c55e;
+    display: inline-block;
+}
+#nova-ping-hud.ping-good #nova-ping-value {
+    color: #86efac;
+}
+#nova-ping-hud.ping-warn .ping-dot {
+    background: #facc15;
+    box-shadow: 0 0 6px #facc15;
+}
+#nova-ping-hud.ping-warn #nova-ping-value {
+    color: #fde047;
+}
+#nova-ping-hud.ping-bad .ping-dot {
+    background: #ef4444;
+    box-shadow: 0 0 6px #ef4444;
+}
+#nova-ping-hud.ping-bad #nova-ping-value {
+    color: #fca5a5;
+}
+
+/* ==========================================================================
+   REFONTE ERGONOMIQUE DE L'UI MOBILE & BARRE DU BAS (#bar-container, #notifications, #chatbox, #nova-inventory)
+   ========================================================================== */
+
+/* Masquer les mini-boutons redondants - / 100% / + dans la barre inférieure (réglables dans le Hub Réglages) */
+#pad-zoom-minus,
+#pad-quick-size,
+#pad-zoom-plus {
+    display: none !important;
+}
+
+/* Positionnement propre sur grand écran tactile (> 1000px) */
+body.touch-device #touch-controls-toggle {
+    left: 446px;
+    top: 8px;
+}
+
+/* Barre de Chat universelle en Flexbox (aucun chevauchement entre [Global], l'input et Envoyer) */
+.game #chatbox {
+    background-image: none !important;
+    background: rgba(15, 23, 42, 0.96) !important;
+    border: 2px solid #ca8a04 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.75) !important;
+    width: min(640px, 92%) !important;
+    height: 38px !important;
+    left: 50% !important;
+    margin-left: 0 !important;
+    transform: translateX(-50%) !important;
+    bottom: 44px !important;
+    padding: 0 6px !important;
+    z-index: 65 !important;
+    display: none !important;
+}
+.game #chatbox.active {
+    display: flex !important;
+    align-items: center !important;
+}
+.game #chatbox form {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+.game #chatbox #chat-mode-toggle {
+    float: none !important;
+    margin: 0 !important;
+    height: 26px !important;
+    padding: 0 8px !important;
+    font-size: 11px !important;
+    line-height: 24px !important;
+    flex-shrink: 0 !important;
+    position: static !important;
+}
+.game #chatbox input#chatinput {
+    flex: 1 1 auto !important;
+    width: auto !important;
+    min-width: 80px !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 4px 10px !important;
+    height: 26px !important;
+    font-size: 12px !important;
+    color: #f8fafc !important;
+    background: rgba(2, 6, 23, 0.85) !important;
+    border: 1px solid rgba(148, 163, 184, 0.4) !important;
+    border-radius: 5px !important;
+    box-sizing: border-box !important;
+}
+.game #chatbox input#chatinput:focus {
+    border-color: #facc15 !important;
+    outline: none !important;
+}
+.game #chatbox #chat-send-btn {
+    position: static !important;
+    flex-shrink: 0 !important;
+    height: 26px !important;
+    padding: 0 10px !important;
+    font-size: 11px !important;
+    line-height: 24px !important;
+    margin: 0 !important;
+}
+
+/* Harmonisation complète de la barre inférieure et des panneaux sur écrans <= 1000px ou appareils tactiles */
+@media screen and (max-width: 1000px) {
+    .game #bar-container {
+        position: relative !important;
+        height: 36px !important;
+        width: 100% !important;
+        background-image: none !important;
+        background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%) !important;
+        border-top: 2px solid #ca8a04 !important;
+        border-radius: 0 0 6px 6px !important;
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.5) !important;
+        top: 0 !important;
+        z-index: 25 !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Barre de vie propre et lisible sans dépendre de l'étirement de barsheet.png */
+    .game #healthbar {
+        position: absolute !important;
+        left: 6px !important;
+        top: 5px !important;
+        width: 112px !important;
+        height: 24px !important;
+        background-image: none !important;
+        background: rgba(2, 6, 23, 0.88) !important;
+        border: 1.5px solid #ca8a04 !important;
+        border-radius: 5px !important;
+        box-sizing: border-box !important;
+        z-index: 20 !important;
+    }
+    .game #hitpoints {
+        position: absolute !important;
+        left: 8px !important;
+        top: 7px !important;
+        height: 20px !important;
+        max-width: 108px !important;
+        border-radius: 3px !important;
+        background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%) !important;
+        box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.35) !important;
+        z-index: 21 !important;
+    }
+    .game #expbar {
+        display: none !important;
+    }
+
+    /* Cases d'équipement Arme & Armure encadrées proprement */
+    .game #weapon,
+    .game #armor {
+        position: absolute !important;
+        width: 30px !important;
+        height: 30px !important;
+        top: 2px !important;
+        background-size: 192px !important;
+        background-position: -64px !important;
+        background-color: rgba(2, 6, 23, 0.85) !important;
+        border: 1px solid #8c7355 !important;
+        border-radius: 4px !important;
+        box-sizing: border-box !important;
+        z-index: 22 !important;
+    }
+    .game #weapon { left: 122px !important; }
+    .game #armor { left: 155px !important; }
+
+    /* Boutons Sac & Pad alignés sans jamais recouvrir #armor ni #notifications */
+    .game #inventory-toggle {
+        position: absolute !important;
+        left: 190px !important;
+        top: 4px !important;
+        height: 26px !important;
+        padding: 0 7px !important;
+        font-size: 11px !important;
+        line-height: 24px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 3px !important;
+        border-radius: 4px !important;
+        box-sizing: border-box !important;
+        z-index: 30 !important;
+    }
+    .game #touch-controls-toggle {
+        position: absolute !important;
+        left: 248px !important;
+        top: 4px !important;
+        height: 26px !important;
+        padding: 0 7px !important;
+        font-size: 11px !important;
+        line-height: 24px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 3px !important;
+        border-radius: 4px !important;
+        box-sizing: border-box !important;
+        z-index: 30 !important;
+    }
+
+    /* Zone de messages du bas (#notifications -> #message1 / #message2) TOUJOURS visible et bien centrée */
+    .game #notifications {
+        display: block !important;
+        position: absolute !important;
+        left: 308px !important;
+        right: 146px !important;
+        top: 4px !important;
+        width: auto !important;
+        margin-left: 0 !important;
+        height: 26px !important;
+        background: rgba(2, 6, 23, 0.82) !important;
+        border: 1px solid rgba(202, 138, 4, 0.45) !important;
+        border-radius: 5px !important;
+        padding: 0 8px !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+        z-index: 26 !important;
+    }
+    body:not(.touch-device) .game #notifications {
+        left: 252px !important;
+    }
+    .game #notifications div {
+        top: 0 !important;
+    }
+    .game #notifications div.top {
+        top: -26px !important;
+    }
+    .game #notifications span {
+        height: 26px !important;
+        line-height: 26px !important;
+        font-size: 11px !important;
+        color: #fef08a !important;
+        text-shadow: 1px 1px 0 #000 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        display: block !important;
+    }
+
+    /* Compteur de joueurs et 4 boutons d'action à droite */
+    .game #playercount {
+        position: absolute !important;
+        font-size: 11px !important;
+        left: auto !important;
+        right: 120px !important;
+        top: 9px !important;
+        width: auto !important;
+        color: #fde047 !important;
+        white-space: nowrap !important;
+        z-index: 28 !important;
+    }
+    .game .barbutton {
+        background-image: url('../img/2/barsheet.png') !important;
+        background-size: 960px !important;
+        height: 30px !important;
+        width: 28px !important;
+        top: 2px !important;
+        left: auto !important;
+        z-index: 28 !important;
+    }
+    .game #chatbutton { background-position: -204px -34px !important; right: 92px !important; }
+    .game #chatbutton.active { background-position: -260px -34px !important; }
+    .game #achievementsbutton { background-position: -288px -34px !important; right: 62px !important; }
+    .game #achievementsbutton.active { background-position: -344px -34px !important; }
+    .game #helpbutton { background-position: -372px -34px !important; right: 32px !important; }
+    .game #helpbutton.active { background-position: -428px -34px !important; }
+    .game #mutebutton { background-position: -456px -34px !important; right: 2px !important; }
+    .game #mutebutton.active { background-position: -512px -34px !important; }
+
+    /* Fenêtre popup Population alignée au-dessus du compteur */
+    .game #population {
+        right: 8px !important;
+        bottom: 42px !important;
+        z-index: 45 !important;
+    }
+}
+
+/* Sur téléphones compacts (<= 740px), faire flotter la bannière de messages juste au-dessus de la barre pour 100% de lisibilité */
+@media screen and (max-width: 740px) {
+    .game #notifications {
+        left: 50% !important;
+        right: auto !important;
+        top: auto !important;
+        bottom: 40px !important;
+        transform: translateX(-50%) !important;
+        width: min(360px, 68vw) !important;
+        height: 24px !important;
+        background: rgba(9, 13, 22, 0.88) !important;
+        border: 1px solid rgba(250, 204, 21, 0.55) !important;
+        border-radius: 12px !important;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.65) !important;
+        pointer-events: none !important;
+        z-index: 32 !important;
+    }
+    .game #notifications div.top {
+        top: -24px !important;
+    }
+    .game #notifications span {
+        height: 24px !important;
+        line-height: 24px !important;
+        font-size: 10px !important;
+    }
+}
+
+/* Centrer le Sac à dos (#nova-inventory) sur mobile/tactile pour ne JAMAIS couvrir le bouton d'attaque à droite */
+@media screen and (max-width: 1000px) {
+    #nova-inventory {
+        left: 50% !important;
+        right: auto !important;
+        transform: translateX(-50%) !important;
+        bottom: 44px !important;
+        padding: 6px 10px !important;
+        z-index: 42 !important;
+    }
+}
+body.touch-device #nova-inventory {
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
+    bottom: 44px !important;
+    padding: 6px 10px !important;
+    z-index: 42 !important;
+}
+body.touch-device #nova-inventory .inv-slot {
+    width: 36px !important;
+    height: 36px !important;
+}
+
+/* Proportions ergonomiques du Joystick et du Bouton d'action sur mobile */
+#mobile-controls {
+    bottom: 40px !important;
+    height: 130px !important;
+}
+#mobile-joystick-zone {
+    left: 14px !important;
+    bottom: 6px !important;
+    width: 116px !important;
+    height: 116px !important;
+}
+.joystick-base {
+    width: 116px !important;
+    height: 116px !important;
+}
+.joystick-stick {
+    width: 48px !important;
+    height: 48px !important;
+    margin-top: -24px !important;
+    margin-left: -24px !important;
+}
+#mobile-combat-zone {
+    right: 14px !important;
+    bottom: 8px !important;
+}
+.mob-act-btn.attack {
+    width: 70px !important;
+    height: 70px !important;
+}
+.mob-act-btn.attack .mob-ico {
+    font-size: 22px !important;
+}
+.mob-act-btn.attack .mob-lbl {
+    font-size: 8px !important;
+}
+
+/* Allègement des badges HUD supérieurs sur écrans mobiles */
+@media screen and (max-width: 900px) {
+    #nova-lives-hud {
+        top: 6px !important;
+        left: 8px !important;
+        padding: 3px 8px !important;
+        gap: 6px !important;
+    }
+    #nova-lives-hud .nova-heart {
+        font-size: 13px !important;
+    }
+    #nova-lives-hud .nova-lives-label {
+        font-size: 10px !important;
+    }
+    #nova-ping-hud {
+        top: 6px !important;
+        right: 8px !important;
+        padding: 3px 8px !important;
+        font-size: 10px !important;
+    }
+    #nova-door-diag-btn {
+        display: none !important;
+    }
+}
+
+/* ==========================================================================
    VISIBILITÉ AUTOMATIQUE SUR APPAREILS TACTILES & MASQUAGE TOTAL SUR PC
    ========================================================================== */
 body:not(.touch-device) #mobile-controls,
@@ -2852,5 +3307,188 @@ body:not(.nova-mobile-app) .mobile-server-bar {
     color: #000;
 }
 
+/* ==========================================================================
+   OUTIL DE DIAGNOSTIC PORTES & MAISONS (#nova-door-diag-overlay)
+   ========================================================================== */
+#nova-door-diag-btn {
+    margin-left: 6px;
+    padding: 1px 6px;
+    font-size: 10px;
+    font-family: 'GraphicPixel', monospace, sans-serif;
+    color: #fde68a;
+    background: rgba(30, 41, 59, 0.9);
+    border: 1px solid rgba(250, 204, 21, 0.55);
+    border-radius: 4px;
+    cursor: pointer;
+    line-height: 1.3;
+    pointer-events: auto;
+}
 
+#nova-door-diag-btn:hover {
+    background: #ca8a04;
+    color: #000;
+}
+
+#nova-door-diag-overlay {
+    position: fixed;
+    top: 42px;
+    right: 10px;
+    width: min(440px, calc(100vw - 20px));
+    max-height: calc(100vh - 96px);
+    display: flex;
+    flex-direction: column;
+    background: rgba(15, 23, 42, 0.96);
+    border: 2px solid #eab308;
+    border-radius: 8px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.78);
+    color: #f8fafc;
+    font-family: monospace;
+    font-size: 11px;
+    z-index: 9500;
+    overflow: hidden;
+    pointer-events: auto;
+}
+
+#nova-door-diag-overlay .door-diag-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 10px;
+    background: rgba(30, 41, 59, 0.98);
+    border-bottom: 1px solid rgba(234, 179, 8, 0.45);
+    font-weight: bold;
+    color: #fde047;
+}
+
+#nova-door-diag-overlay .door-diag-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+#nova-door-diag-overlay .door-diag-actions button {
+    background: #334155;
+    color: #f8fafc;
+    border: 1px solid #64748b;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 10px;
+    font-family: monospace;
+    cursor: pointer;
+}
+
+#nova-door-diag-overlay .door-diag-actions button:hover {
+    background: #eab308;
+    color: #0f172a;
+    border-color: #fde047;
+}
+
+#nova-door-diag-body {
+    padding: 8px 10px;
+    max-height: calc(100vh - 145px);
+    overflow-y: auto;
+    line-height: 1.4;
+}
+
+/* ======= CARTE EN TEMPS RÉEL, STATUT MAISON & QUÊTES PNJ ======= */
+.hub-map-live-status {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: rgba(15, 23, 42, 0.9);
+    border: 1px solid rgba(250, 204, 21, 0.45);
+    border-radius: 8px;
+    color: #f8fafc;
+    font-size: 12px;
+}
+
+.hub-map-live-info {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.hub-map-env-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 11px;
+}
+
+.hub-map-env-badge.outdoor {
+    background: rgba(22, 163, 74, 0.25);
+    border: 1px solid #22c55e;
+    color: #86efac;
+}
+
+.hub-map-env-badge.indoor {
+    background: rgba(234, 179, 8, 0.28);
+    border: 1px solid #facc15;
+    color: #fde047;
+}
+
+.hub-map-coords {
+    font-family: monospace;
+    color: #e2e8f0;
+    background: rgba(30, 41, 59, 0.9);
+    padding: 2px 7px;
+    border-radius: 4px;
+    border: 1px solid #475569;
+}
+
+.hub-map-region-name {
+    color: #fbbf24;
+    font-weight: bold;
+}
+
+.hub-npc-quests-box {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: rgba(30, 41, 59, 0.85);
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    border-radius: 8px;
+    font-size: 12px;
+    color: #f1f5f9;
+}
+
+.hub-npc-quest-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.hub-quest-status-badge {
+    color: #fde047;
+    font-weight: bold;
+    font-size: 11px;
+}
+
+.hub-npc-quest-btns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.hub-npc-quest-btn.active-quest {
+    background: linear-gradient(180deg, #facc15, #ca8a04) !important;
+    color: #0f172a !important;
+    border-color: #fef08a !important;
+    font-weight: bold;
+}
+
+.hub-map-card.current-region {
+    border: 2px solid #facc15 !important;
+    box-shadow: 0 0 14px rgba(250, 204, 21, 0.35);
+}
 

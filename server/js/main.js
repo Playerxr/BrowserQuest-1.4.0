@@ -22,6 +22,7 @@ function main(config) {
 
     var ws = require("./ws"),
         WorldServer = require("./worldserver"),
+        ConnectionQueue = null,
         server = new ws.MultiVersionWebsocketServer(process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT || config.port, config.use_one_port),
         metrics = config.metrics_enabled ? new Metrics(config) : null,
         worlds = [],
@@ -30,13 +31,60 @@ function main(config) {
         firebaseService = null;
 
         try {
+            ConnectionQueue = require("./queue");
+        } catch(e) {
+            ConnectionQueue = function(opts) {
+                this.maxQueueSize = (opts && typeof opts.maxQueueSize === "number") ? opts.maxQueueSize : 100;
+                this.queue = [];
+                this.size = function() { return this.queue.length; };
+                this.enqueue = function(conn) {
+                    if (this.queue.length >= this.maxQueueSize) {
+                        conn.sendUTF8('full');
+                        conn.close('All worlds are full');
+                        return false;
+                    }
+                    this.queue.push(conn);
+                    conn.sendUTF8('queue:' + this.queue.length + ':' + this.queue.length);
+                    return true;
+                };
+                this.processQueue = function(wList, cap, cb) {
+                    var count = 0;
+                    while (this.queue.length > 0) {
+                        var avail = _.detect(wList, function(w) { return w.map && w.map.isLoaded && w.playerCount < cap; });
+                        if (!avail) break;
+                        var next = this.queue.shift();
+                        count++;
+                        cb(next, avail);
+                    }
+                    return count;
+                };
+            };
+        }
+
+        var connectionQueue = new ConnectionQueue({
+            maxQueueSize: (typeof config.max_queue_size === 'number') ? config.max_queue_size : 100
+        });
+        server.connectionQueue = connectionQueue;
+
+        try {
             firebaseService = require("./firebase_service");
             if (firebaseService && typeof firebaseService.init === 'function') {
                 firebaseService.init();
             }
         } catch(e) {}
 
+        var admitConnectionToWorld = function(connection, world) {
+            if(!world || !connection || connection.isClosed) return;
+            world.updatePopulation();
+            world.connect_callback(new Player(connection, world, databaseHandler));
+        };
+
+        var drainWaitingQueue = function() {
+            connectionQueue.processQueue(worlds, config.nb_players_per_world, admitConnectionToWorld);
+        };
+
         checkPopulationInterval = setInterval(function() {
+            drainWaitingQueue();
             var currentOnline = 0;
             _.each(worlds, function(w) { currentOnline += (w.playerCount || 0); });
 
@@ -83,21 +131,28 @@ function main(config) {
             metrics.getOpenWorldCount(function(open_world_count) {
                 // choose the least populated world among open worlds
                 world = _.min(_.first(worlds, open_world_count), function(w) { return w.playerCount; });
-                connect();
+                if(world && world.playerCount < config.nb_players_per_world && connectionQueue.size() === 0) {
+                    connect();
+                } else {
+                    connectionQueue.enqueue(connection);
+                }
             });
         }
         else {
+            if(connectionQueue.size() > 0) {
+                connectionQueue.enqueue(connection);
+                drainWaitingQueue();
+                return;
+            }
             // simply fill each world sequentially until they are full
             world = _.detect(worlds, function(world) {
                 return world.playerCount < config.nb_players_per_world;
             });
             if(!world) {
-                connection.sendUTF8('full');
-                connection.close('All worlds are full');
+                connectionQueue.enqueue(connection);
                 return;
             }
-            world.updatePopulation();
-            connect();
+            admitConnectionToWorld(connection, world);
         }
     });
 
@@ -123,8 +178,17 @@ function main(config) {
         world.run(config.map_filepath);
         worlds.push(world);
         if(metrics) {
-            world.onPlayerAdded(onPopulationChange);
-            world.onPlayerRemoved(onPopulationChange);
+            if(typeof world.onPlayerAdded === 'function') {
+                world.onPlayerAdded(onPopulationChange);
+            }
+            if(typeof world.onPlayerRemoved === 'function') {
+                world.onPlayerRemoved(function() {
+                    onPopulationChange();
+                    drainWaitingQueue();
+                });
+            }
+        } else if(typeof world.onPlayerRemoved === 'function') {
+            world.onPlayerRemoved(drainWaitingQueue);
         }
     });
 

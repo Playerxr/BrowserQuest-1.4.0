@@ -219,6 +219,9 @@ define(['character'], function(Character) {
 					msg = NpcTalk[this.itemKind][this.discourse]["text"][this.talkIndex];
 				}
             }
+            if(this.talkIndex === 0 && game && game.client && typeof game.client.sendHub === 'function') {
+                game.client.sendHub('npc_quest_interact', { npcKind: this.itemKind });
+            }
             this.talkIndex += 1;
 
             return msg.replace('*name*',game.player.name);

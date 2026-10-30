@@ -41,8 +41,28 @@ if (fs.existsSync(manifestPath)) {
     );
   }
 
+  if (!manifest.includes('android.permission.VIBRATE')) {
+    manifest = manifest.replace(
+      '</manifest>',
+      '    <uses-permission android:name="android.permission.VIBRATE" />\n</manifest>'
+    );
+  }
+
+  if (!manifest.includes('android:scheme="novaquest"')) {
+    manifest = manifest.replace(
+      '</activity>',
+      '            <intent-filter>\n' +
+      '                <action android:name="android.intent.action.VIEW" />\n' +
+      '                <category android:name="android.intent.category.DEFAULT" />\n' +
+      '                <category android:name="android.intent.category.BROWSABLE" />\n' +
+      '                <data android:scheme="novaquest" android:host="auth-complete" />\n' +
+      '            </intent-filter>\n' +
+      '        </activity>'
+    );
+  }
+
   fs.writeFileSync(manifestPath, manifest, 'utf8');
-  console.log('Configured AndroidManifest.xml (sensorLandscape + INTERNET)');
+  console.log('Configured AndroidManifest.xml (sensorLandscape + INTERNET + VIBRATE + novaquest:// deep link)');
 }
 
 if (fs.existsSync(stylesPath)) {

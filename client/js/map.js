@@ -151,12 +151,21 @@ define(['jquery', 'area'], function($, Area) {
                     default : o = Types.Orientations.DOWN;
                 }
 
+                var destX = Number(door.tx),
+                    destY = Number(door.ty),
+                    normCamX = (!isNaN(destX) && destX > 0) ? Math.max(0, Math.floor((destX - 1) / 28) * 28) : door.tcx,
+                    normCamY = (!isNaN(destY) && destY > 0) ? Math.max(0, Math.floor((destY - 1) / 12) * 12) : door.tcy;
+
                 doors[self.GridPositionToTileIndex(door.x, door.y)] = {
                     x: door.tx,
                     y: door.ty,
                     orientation: o,
-                    cameraX: door.tcx,
-                    cameraY: door.tcy,
+                    cameraX: normCamX,
+                    cameraY: normCamY,
+                    legacyCameraX: door.tcx,
+                    legacyCameraY: door.tcy,
+                    doorX: door.x,
+                    doorY: door.y,
                     portal: door.p === 1,
                 };
             });

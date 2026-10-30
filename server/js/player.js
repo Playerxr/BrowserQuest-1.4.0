@@ -181,6 +181,9 @@ module.exports = Player = Character.extend({
                         y = message[2];
 
                     if(Gameplay.move(self, x, y)) {
+                        if(self.server && typeof self.server.isPlayerInHouseInterior === 'function' && !self.server.isPlayerInHouseInterior(self)) {
+                            self._lastOutdoorPos = { x: self.x, y: self.y };
+                        }
                         self.clearTarget();
 
                         self.broadcast(new Messages.Move(self));
@@ -317,6 +320,9 @@ module.exports = Player = Character.extend({
                     y = message[2];
 
                 if(Gameplay.canTeleport(self, x, y)) {
+                    if(self.server && typeof self.server.isPlayerInHouseInterior === 'function' && !self.server.isPlayerInHouseInterior(self)) {
+                        self._lastOutdoorPos = { x: self.x, y: self.y };
+                    }
                     self.setPosition(x, y);
                     self.clearTarget();
 
@@ -1078,6 +1084,9 @@ module.exports = Player = Character.extend({
             armorRarityLabel: Types.getItemRarityLabel ? Types.getItemRarityLabel(this.armor) : "Commun",
             inventorySlots: inventorySlots,
             inGuildHall: !!(this.guildId && this.instanceId === ("guild_" + this.guildId)),
+            inHouseInterior: !!(this.server && typeof this.server.isPlayerInHouseInterior === 'function' && this.server.isPlayerInHouseInterior(this)),
+            activeQuest: this.activeQuest || null,
+            npcQuests: this.getNpcQuestCatalog(),
             shopItems: this.getShopCatalog(),
             marketItems: marketItems,
             guild: guildData,
@@ -1089,6 +1098,129 @@ module.exports = Player = Character.extend({
         }
 
         this.send(new Messages.Hub("state", payload).serialize());
+    },
+
+    getNpcQuestCatalog: function() {
+        return [
+            {
+                id: "rats_village",
+                title: "🐀 Cave du Village : Chasse aux Rats",
+                giverNpc: "villagegirl",
+                giverLabel: "Villageoise / Maisons du Village",
+                targetMobs: ["rat"],
+                targetCount: 3,
+                rewardGold: 80,
+                rewardExp: 50,
+                region: "village",
+                description: "Éliminez 3 Rats autour du Village et des granges."
+            },
+            {
+                id: "crabs_beach",
+                title: "🦀 Plage du Sud : Pinces de Crabes",
+                giverNpc: "beachnpc",
+                giverLabel: "Marin de la Plage",
+                targetMobs: ["crab"],
+                targetCount: 3,
+                rewardGold: 120,
+                rewardExp: 80,
+                region: "beach",
+                description: "Éliminez 3 Crabes sur le littoral de la Plage du Sud."
+            },
+            {
+                id: "goblins_forest",
+                title: "👺 Grande Forêt : Éclaireurs Gobelins",
+                giverNpc: "forestnpc",
+                giverLabel: "Garde Forestier",
+                targetMobs: ["goblin"],
+                targetCount: 4,
+                rewardGold: 180,
+                rewardExp: 120,
+                region: "forest",
+                description: "Repoussez 4 Gobelins dans les bois au nord du Village."
+            },
+            {
+                id: "skeletons_crypt",
+                title: "💀 Cimetière Maudit : Garde d'Ossements",
+                giverNpc: "priest",
+                giverLabel: "Prêtre / Sanctuaire",
+                targetMobs: ["skeleton", "skeleton2"],
+                targetCount: 4,
+                rewardGold: 260,
+                rewardExp: 180,
+                region: "graveyard",
+                description: "Purifiez 4 Squelettes dans les cryptes ou le Cimetière."
+            }
+        ];
+    },
+
+    startOrSwitchNpcQuest: function(questId, fromNpcName) {
+        var catalog = this.getNpcQuestCatalog();
+        var questDef = _.find(catalog, function(q) { return q.id === questId; }) || catalog[0];
+        if(!questDef) return null;
+
+        if(this.activeQuest && this.activeQuest.id === questDef.id && !this.activeQuest.completed) {
+            this.send(new Messages.Hub("quest_update", {
+                activeQuest: this.activeQuest,
+                message: "📜 Quête en cours : " + this.activeQuest.title + " (" + this.activeQuest.progress + "/" + this.activeQuest.targetCount + ")"
+            }).serialize());
+            return this.activeQuest;
+        }
+
+        this.activeQuest = {
+            id: questDef.id,
+            title: questDef.title,
+            giverLabel: fromNpcName || questDef.giverLabel,
+            targetMobs: questDef.targetMobs,
+            targetCount: questDef.targetCount,
+            progress: 0,
+            rewardGold: questDef.rewardGold,
+            rewardExp: questDef.rewardExp,
+            region: questDef.region,
+            completed: false
+        };
+        this.send(new Messages.Hub("quest_update", {
+            activeQuest: this.activeQuest,
+            message: "📜 Nouvelle Quête acceptée : " + questDef.title + " (Récompense : +" + questDef.rewardGold + " Or, +" + questDef.rewardExp + " XP)"
+        }).serialize());
+        return this.activeQuest;
+    },
+
+    onMobKilledForNpcQuest: function(mob) {
+        if(!this.activeQuest || this.activeQuest.completed || !mob) return false;
+        var mobKindStr = Types.getKindAsString(mob.kind);
+        if(!mobKindStr || !_.include(this.activeQuest.targetMobs, mobKindStr)) {
+            return false;
+        }
+
+        this.activeQuest.progress = Math.min(this.activeQuest.targetCount, (this.activeQuest.progress || 0) + 1);
+        if(this.activeQuest.progress >= this.activeQuest.targetCount) {
+            this.activeQuest.completed = true;
+            var rGold = this.activeQuest.rewardGold || 100;
+            var rExp = this.activeQuest.rewardExp || 50;
+            this.gold = (this.gold || 0) + rGold;
+            this.incExp(rExp);
+            if(this.databaseHandler && this.databaseHandler.savePlayer) {
+                this.databaseHandler.savePlayer(this);
+            }
+            this.send(new Messages.Kill(mob, this.level, this.experience).serialize());
+            this.send(new Messages.Hub("gold_update", { gold: this.gold, reward: rGold }).serialize());
+            var doneTitle = this.activeQuest.title;
+            this.activeQuest = null;
+            this.send(new Messages.Hub("quest_update", {
+                activeQuest: null,
+                completedTitle: doneTitle,
+                rewardGold: rGold,
+                rewardExp: rExp,
+                message: "🎉 Quête accomplie : " + doneTitle + " ! Vous recevez +" + rGold + " Or et +" + rExp + " XP !"
+            }).serialize());
+            return true;
+        } else {
+            this.send(new Messages.Hub("quest_update", {
+                activeQuest: this.activeQuest,
+                message: "⚔️ Progression Quête : " + this.activeQuest.title + " (" + this.activeQuest.progress + "/" + this.activeQuest.targetCount + ")"
+            }).serialize());
+            return true;
+        }
     },
 
     giveOrEquipItem: function(kindName) {
@@ -1108,6 +1240,14 @@ module.exports = Player = Character.extend({
         var self = this,
             db = this.databaseHandler;
         data = data || {};
+
+        if(subAction === "ping") {
+            this.send(new Messages.Hub("pong", {
+                t: Number(data.t) || Date.now(),
+                serverTime: Date.now()
+            }).serialize());
+            return;
+        }
 
         if(Economy.handles(subAction) && !this._economyTransactionActive) {
             try {
@@ -1684,9 +1824,66 @@ module.exports = Player = Character.extend({
             return;
         }
 
+        if(subAction === "npc_quest_interact") {
+            var npcKindStr = Utils.sanitize(String(data.npcKind || "")).trim().toLowerCase();
+            var npcQuestMap = {
+                villagegirl: "rats_village",
+                villager: "rats_village",
+                agent: "rats_village",
+                octocat: "rats_village",
+                coder: "rats_village",
+                beachnpc: "crabs_beach",
+                forestnpc: "goblins_forest",
+                guard: "goblins_forest",
+                nyan: "goblins_forest",
+                priest: "skeletons_crypt",
+                scientist: "skeletons_crypt",
+                desertnpc: "skeletons_crypt",
+                sorceror: "skeletons_crypt",
+                lavanpc: "skeletons_crypt"
+            };
+            var mappedQuestId = npcQuestMap[npcKindStr] || "rats_village";
+            if(!this.activeQuest) {
+                this.startOrSwitchNpcQuest(mappedQuestId);
+            } else {
+                this.send(new Messages.Hub("quest_update", {
+                    activeQuest: this.activeQuest,
+                    message: "📜 Quête active : " + this.activeQuest.title + " (" + this.activeQuest.progress + "/" + this.activeQuest.targetCount + ")"
+                }).serialize());
+            }
+            return;
+        }
+
+        if(subAction === "npc_quest_start") {
+            var reqQuestId = Utils.sanitize(String(data.questId || "")).trim();
+            var started = this.startOrSwitchNpcQuest(reqQuestId);
+            if(started) {
+                this.sendHubState("📜 Quête sélectionnée : " + started.title, false);
+            }
+            return;
+        }
+
         // ======= VOYAGES & TÉLÉPORTATIONS CARTE =======
         if(subAction === "map_teleport") {
+            if(this.isDead) {
+                this.sendHubNotice("Impossible de se téléporter en étant mort.", true);
+                return;
+            }
             var destKey = String(data.destination || "").trim().toLowerCase();
+            if(destKey === "exit_house") {
+                var exitPos = (this._lastOutdoorPos && this.server.isValidPosition(this._lastOutdoorPos.x, this._lastOutdoorPos.y))
+                    ? this._lastOutdoorPos
+                    : { x: 43, y: 210 };
+                this.server.handlePlayerVanish(this);
+                this.setPosition(exitPos.x, exitPos.y);
+                this.server.handleEntityGroupMembership(this);
+                this.clearTarget();
+                this.send(new Messages.Teleport(this).serialize());
+                this.broadcast(new Messages.Teleport(this), false);
+                this.server.pushRelevantEntityListTo(this);
+                this.sendHubNotice("🚪 Vous êtes sorti de la maison vers (" + exitPos.x + ", " + exitPos.y + ").", false);
+                return;
+            }
             var destinations = {
                 village: { name: "Village de Départ", x: 43, y: 210 },
                 beach: { name: "Plage du Sud", x: 110, y: 280 },
@@ -1708,6 +1905,7 @@ module.exports = Player = Character.extend({
             } else {
                 this.server.handlePlayerVanish(this);
             }
+            this._lastOutdoorPos = { x: dest.x, y: dest.y };
             this.setPosition(dest.x, dest.y);
             this.server.handleEntityGroupMembership(this);
             this.clearTarget();

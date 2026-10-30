@@ -163,14 +163,45 @@ module.exports = World = cls.Class.extend({
         this.onRegenTick(function() {
             self.forEachCharacter(function(character) {
                 if(!character.hasFullHealth()) {
-                    character.regenHealthBy(Math.floor(character.maxHitPoints / 25));
+                    var isRestingIndoors = (character.type === 'player' &&
+                                            self.isPlayerInHouseInterior(character) &&
+                                            _.size(character.attackers) === 0);
+                    var healAmount = isRestingIndoors
+                        ? Math.max(4, Math.floor(character.maxHitPoints / 12))
+                        : Math.max(1, Math.floor(character.maxHitPoints / 25));
+
+                    character.regenHealthBy(healAmount);
 
                     if(character.type === 'player') {
                         self.pushToPlayer(character, character.regen());
+                        if(isRestingIndoors) {
+                            self.pushToPlayer(character, new Messages.Hub("house_rest_heal", {
+                                amount: healAmount,
+                                hp: character.hitPoints,
+                                maxHp: character.maxHitPoints
+                            }));
+                        }
                     }
                 }
             });
         });
+    },
+
+    isPlayerInHouseInterior: function(player) {
+        if(!player || player.isDead) return false;
+        var gx = Number(player.x),
+            gy = Number(player.y);
+        if(isNaN(gx) || isNaN(gy)) return false;
+        if(gx >= 145 && gx <= 168 && gy >= 270 && gy <= 292) {
+            return false;
+        }
+        if(gx >= 115 && gy >= 60) {
+            return true;
+        }
+        if(gy >= 265) {
+            return true;
+        }
+        return false;
     },
 
     run: function(mapFilePath) {
@@ -700,6 +731,11 @@ module.exports = World = cls.Class.extend({
                     this.pushToPlayer(killer, new Messages.Kill(mob, killer.level, killer.experience));
                     this.pushToPlayer(killer, new Messages.Hub("gold_update", { gold: killer.gold, reward: goldReward }));
 
+                    // Progression des Quêtes PNJ de Chasse
+                    if(typeof killer.onMobKilledForNpcQuest === 'function') {
+                        killer.onMobKilledForNpcQuest(mob);
+                    }
+
                     // Progression des Quêtes Collectives de Guilde (Guildes 3.0)
                     if(killer.guildId && this.databaseHandler && this.databaseHandler.addGuildQuestProgress) {
                         var killsCount = Types.isBoss(mob.kind) ? 25 : 1;
@@ -825,7 +861,10 @@ module.exports = World = cls.Class.extend({
             mob.forgetPlayer(player.id, 1000);
         });
 
-        this.handleEntityGroupMembership(player);
+        var hasChangedGroups = this.handleEntityGroupMembership(player);
+        if(hasChangedGroups) {
+            this.pushToPreviousGroups(player, new Messages.Destroy(player));
+        }
     },
 
     setPlayerCount: function(count) {

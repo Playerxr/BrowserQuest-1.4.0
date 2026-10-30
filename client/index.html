@@ -96,11 +96,17 @@
           	               Créer un Compte
           	               <span class="right-ornament"></span>
                           </h1>
-                          <div class="google-auth-btn" id="google-signup-btn">
-                              <span class="google-icon"></span>
-                              <span class="google-text">Créer avec Google</span>
+                          <div class="auth-buttons-row">
+                              <div class="google-auth-btn" id="google-signup-btn" data-provider="google">
+                                  <span class="google-icon"></span>
+                                  <span class="google-text">Créer avec Google</span>
+                              </div>
+                              <div class="play-games-auth-btn" id="playgames-signup-btn" data-provider="playgames">
+                                  <span class="play-games-icon"></span>
+                                  <span class="play-games-text">Google Play Jeux</span>
+                              </div>
                           </div>
-                          <a href="#" class="google-fallback-link google-redirect-btn">Problème de popup ? Connexion Google directe</a>
+                          <a href="#" class="google-fallback-link google-redirect-btn">Connexion rapide via le navigateur du téléphone</a>
                           <div class="auth-divider"><span>OU</span></div>
                           <form action="none" method="get" accept-charset="utf-8" onsubmit="return false;">
                               <label for="nameinput" class="sr-only">Pseudo</label>
@@ -131,11 +137,17 @@
           	               Nova Quest
           	               <span class="right-ornament"></span>
                           </h1>
-                          <div class="google-auth-btn" id="google-login-btn">
-                              <span class="google-icon"></span>
-                              <span class="google-text">Se connecter avec Google</span>
+                          <div class="auth-buttons-row">
+                              <div class="google-auth-btn" id="google-login-btn" data-provider="google">
+                                  <span class="google-icon"></span>
+                                  <span class="google-text">Se connecter avec Google</span>
+                              </div>
+                              <div class="play-games-auth-btn" id="playgames-login-btn" data-provider="playgames">
+                                  <span class="play-games-icon"></span>
+                                  <span class="play-games-text">Google Play Jeux</span>
+                              </div>
                           </div>
-                          <a href="#" class="google-fallback-link google-redirect-btn">Problème de popup ? Connexion Google directe</a>
+                          <a href="#" class="google-fallback-link google-redirect-btn">Connexion rapide via le navigateur du téléphone</a>
                           <div class="auth-divider"><span>OU</span></div>
                           <form action="none" method="get" accept-charset="utf-8" onsubmit="return false;">
                               <label for="loginnameinput" class="sr-only">Pseudo</label>
@@ -440,6 +452,28 @@
                         <div class="hub-map-header">
                             <h3>🗺️ Carte du Monde & Téléportation Instantanée</h3>
                             <p class="hub-hint">Cliquez sur une région pour vous y téléporter immédiatement et explorer le monde.</p>
+                            <div id="hub-map-live-status" class="hub-map-live-status">
+                                <div class="hub-map-live-info">
+                                    <span id="hub-map-live-env" class="hub-map-env-badge outdoor">🌲 Monde Extérieur</span>
+                                    <span id="hub-map-live-coords" class="hub-map-coords">📍 Position : (43, 210)</span>
+                                    <span id="hub-map-live-region" class="hub-map-region-name">Zone : Village de Départ</span>
+                                </div>
+                                <div class="hub-map-live-actions">
+                                    <button type="button" id="hub-map-exit-house-btn" class="hub-action-btn gold" style="display:none;">🚪 Sortir de la maison</button>
+                                </div>
+                            </div>
+                            <div id="hub-npc-quests-box" class="hub-npc-quests-box">
+                                <div class="hub-npc-quest-head">
+                                    <strong>📜 Contrats de Chasse PNJ (Maisons & Villages)</strong>
+                                    <span id="hub-active-quest-badge" class="hub-quest-status-badge">Parlez à un PNJ ou choisissez un contrat :</span>
+                                </div>
+                                <div class="hub-npc-quest-btns">
+                                    <button type="button" class="hub-action-btn hub-npc-quest-btn" data-quest="rats_village">🐀 Rats (3) · +80 Or</button>
+                                    <button type="button" class="hub-action-btn hub-npc-quest-btn" data-quest="crabs_beach">🦀 Crabes (3) · +120 Or</button>
+                                    <button type="button" class="hub-action-btn hub-npc-quest-btn" data-quest="goblins_forest">👺 Gobelins (4) · +180 Or</button>
+                                    <button type="button" class="hub-action-btn hub-npc-quest-btn" data-quest="skeletons_crypt">💀 Squelettes (4) · +260 Or</button>
+                                </div>
+                            </div>
                         </div>
                         <div class="hub-map-grid">
                             <div class="hub-map-card" data-dest="village">
@@ -638,10 +672,27 @@
     				<canvas id="foreground" class="clickable"></canvas>
     			</div>
     			<div id="bubbles"></div>
-                <!-- HUD des 3 Vies (Style Arcade / Mario) en haut de l'écran -->
+                <!-- HUD des 3 Vies (Style Arcade / Mario) et Ping temps réel en haut de l'écran -->
                 <div id="nova-lives-hud" title="Vos Vies (à 0 Vie : Game Over et retour au village)">
                     <span class="lives-label">VIES</span>
                     <span id="nova-lives-icons">❤️❤️❤️</span>
+                </div>
+                <div id="nova-ping-hud" class="ping-good" title="Latence réseau en temps réel (Ping)">
+                    <span class="ping-dot"></span>
+                    <span id="nova-ping-value">-- ms</span>
+                    <button type="button" id="nova-door-diag-btn" class="clickable" title="Ouvrir l'outil de diagnostic des portes et maisons (F9)">🚪 Diag</button>
+                </div>
+                <div id="nova-door-diag-overlay" class="clickable" style="display:none;">
+                    <div class="door-diag-header">
+                        <span>🚪 Diagnostic Portes &amp; Maisons</span>
+                        <div class="door-diag-actions">
+                            <button type="button" id="nova-door-diag-audit-btn" title="Auditer les 84 portes de la carte">Audit Carte</button>
+                            <button type="button" id="nova-door-diag-copy-btn" title="Copier le rapport JSON complet">JSON</button>
+                            <button type="button" id="nova-door-diag-clear-btn" title="Effacer le journal">Vider</button>
+                            <button type="button" id="nova-door-diag-close-btn" title="Fermer">&times;</button>
+                        </div>
+                    </div>
+                    <div id="nova-door-diag-body"></div>
                 </div>
      			<div id="expbar" title="Barre d'expérience"></div>
      			<div id="textWindow"></div>

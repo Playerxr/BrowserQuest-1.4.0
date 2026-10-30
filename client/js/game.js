@@ -2,11 +2,11 @@
 define(['infomanager', 'bubble', 'renderer', 'map', 'animation', 'sprite',
         'tile', 'warrior', 'gameclient', 'audio', 'updater', 'transition',
         'pathfinder', 'item', 'mob', 'npc', 'player', 'character', 'chest',
-        'mobs', 'exceptions', 'config', 'guild', '../../shared/js/gametypes'],
+        'mobs', 'exceptions', 'config', 'guild', 'door_diagnostics', '../../shared/js/gametypes'],
 function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedTile,
          Warrior, GameClient, AudioManager, Updater, Transition, Pathfinder,
          Item, Mob, Npc, Player, Character, Chest, Mobs, Exceptions, config,
-         Guild) {
+         Guild, DoorDiagnostics) {
     var Game = Class.extend({
         init: function(app) {
             this.app = app;
@@ -39,10 +39,22 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
             this.itemGrid = null;
             this.currentCursor = null;
             this.mouse = { x: 0, y: 0 };
+            this.hasMouseMoved = false;
+            this.pingInterval = null;
             this.zoningQueue = [];
             this.previousClickPosition = {};
+            this._lastSentMoveX = null;
+            this._lastSentMoveY = null;
+            this._lastDoorTeleportAt = 0;
+            this.doorDiagnostics = (typeof DoorDiagnostics === 'function') ? new DoorDiagnostics(this) : null;
+            if(this.doorDiagnostics && typeof this.doorDiagnostics.recordEvent !== 'function') {
+                this.doorDiagnostics = null;
+            }
+            if(typeof window !== 'undefined' && this.doorDiagnostics) {
+                window.novaDoorDiagnostics = this.doorDiagnostics;
+            }
 
-            this.cursorVisible = true;
+            this.cursorVisible = false;
             this.selectedX = 0;
             this.selectedY = 0;
             this.selectedCellVisible = false;
@@ -782,12 +794,24 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
 
             this.client = new GameClient(this.host, this.port);
             this.client.fail_callback = function(reason){
+                if(self.app && typeof self.app.hideQueueStatus === 'function') {
+                    self.app.hideQueueStatus();
+                }
                 started_callback({
                     success: false,
                     reason: reason
                 });
                 self.started = false;
             };
+
+            if(typeof this.client.onQueue === 'function') {
+                this.client.onQueue(function(position, total) {
+                    log.info("Waiting in line... (" + position + "/" + total + ")");
+                    if(self.app && typeof self.app.showQueueStatus === 'function') {
+                        self.app.showQueueStatus(position, total);
+                    }
+                });
+            }
 
             //>>excludeStart("prodHost", pragmas.prodHost);
             var config = this.app.config.local || this.app.config.dev;
@@ -813,6 +837,9 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
 
             this.client.onConnected(function() {
                 log.info("Starting client/server handshake");
+                if(self.app && typeof self.app.hideQueueStatus === 'function') {
+                    self.app.hideQueueStatus();
+                }
 
                 self.player.name = self.username;
                 self.player.pw = self.userpw;
@@ -857,6 +884,8 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
                 self.player.name = name;
                 self.player.admin = (admin === 1) ? 1 : 0;
                 self.player.setGridPosition(x, y);
+                self._lastSentMoveX = x;
+                self._lastSentMoveY = y;
                 self.player.setArmorName(armor);
                 self.player.setSpriteName(avatar);
                 self.player.setWeaponName(weapon);
@@ -947,6 +976,20 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
                     }
                 });
 
+                self.player.onCheckDoor(function(x, y) {
+                    return Boolean(self.map && self.map.isDoor(x, y));
+                });
+
+                self.player.onDoorStopGuard(function(x, y, hadNewDest, hadNextStep) {
+                    if(self.doorDiagnostics) {
+                        self.doorDiagnostics.recordGuard(
+                            'JOYSTICK_STOP_ON_DOOR',
+                            'Arrêt forcé sur la porte (' + x + ',' + y + ') malgré un déplacement continu (joystick/clavier).',
+                            { x: x, y: y, hadNewDest: hadNewDest, hadNextStep: hadNextStep }
+                        );
+                    }
+                });
+
                 self.player.onBeforeStep(function() {
                     var blockingEntity = self.getEntityAt(self.player.nextGridX, self.player.nextGridY);
                     if(blockingEntity && blockingEntity.id !== self.playerId) {
@@ -956,40 +999,61 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
                 });
 
                 self.player.onStep(function() {
-                    self.client.sendMove(self.player.gridX, self.player.gridY);
+                    var gx = self.player.gridX,
+                        gy = self.player.gridY;
+
+                    self.sendPlayerMoveIfChanged(gx, gy, 'onStep');
+                    if(self.doorDiagnostics) {
+                        self.doorDiagnostics.recordStep(gx, gy);
+                    }
+                    if(self.app && typeof self.app.updateHubMapLiveStatus === 'function') {
+                        self.app.updateHubMapLiveStatus();
+                    }
+
                     if(self.player.hasNextStep()) {
                         self.registerEntityDualPosition(self.player);
                     }
 
-                    if(self.isZoningTile(self.player.gridX, self.player.gridY)) {
-                        self.enqueueZoningFrom(self.player.gridX, self.player.gridY);
+                    var steppingOnActiveDoor = (!self.player.hasTarget() && self.map && self.map.isDoor(gx, gy));
+                    if(self.isZoningTile(gx, gy)) {
+                        if(steppingOnActiveDoor) {
+                            if(self.doorDiagnostics) {
+                                self.doorDiagnostics.recordGuard(
+                                    'CLEAR_ZONING_ON_DOOR',
+                                    'Transition de zone ignorée sur la case porte (' + gx + ',' + gy + ') pour éviter un conflit caméra.',
+                                    { x: gx, y: gy }
+                                );
+                            }
+                        } else {
+                            self.enqueueZoningFrom(gx, gy);
+                        }
                     }
 
                     self.player.forEachAttacker(self.makeAttackerFollow);
 
-                    var item = self.getItemAt(self.player.gridX, self.player.gridY);
+                    var item = self.getItemAt(gx, gy);
                     if(item instanceof Item) {
                         self.tryLootingItem(item);
                     }
 
 
-                    if((self.player.gridX <= 85 && self.player.gridY <= 179 && self.player.gridY > 178) || (self.player.gridX <= 85 && self.player.gridY <= 266 && self.player.gridY > 265)) {
+                    if((gx <= 85 && gy <= 179 && gy > 178) || (gx <= 85 && gy <= 266 && gy > 265)) {
                         self.tryUnlockingAchievement("INTO_THE_WILD");
                     }
 
-                    if(self.player.gridX <= 85 && self.player.gridY <= 293 && self.player.gridY > 292) {
+                    if(gx <= 85 && gy <= 293 && gy > 292) {
                         self.tryUnlockingAchievement("AT_WORLDS_END");
                     }
 
-                    if(self.player.gridX <= 85 && self.player.gridY <= 100 && self.player.gridY > 99) {
+                    if(gx <= 85 && gy <= 100 && gy > 99) {
                         self.tryUnlockingAchievement("NO_MANS_LAND");
                     }
 
-                    if(self.player.gridX <= 85 && self.player.gridY <= 51 && self.player.gridY > 50) {
+                    if(gx <= 85 && gy <= 51 && gy > 50) {
                         self.tryUnlockingAchievement("HOT_SPOT");
                     }
 
-                    if(self.player.gridX <= 27 && self.player.gridY <= 123 && self.player.gridY > 112) {
+                    if(gx <= 27 && gy <= 123 && gy > 112) {
                         self.tryUnlockingAchievement("TOMB_RAIDER");
                     }
 
@@ -1001,7 +1065,7 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
                 });
 
                 self.player.onStopPathing(function(x, y) {
-                    self.client.sendMove(x, y);
+                    self.sendPlayerMoveIfChanged(x, y, 'onStopPathing');
                     if(self.player.isAttacking() && self.player.hasTarget()) {
                         self.client.sendAttack(self.player.target);
                     }
@@ -1016,51 +1080,9 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
                         self.tryLootingItem(item);
                     }
 
+                    var teleportedViaDoor = false;
                     if(!self.player.hasTarget() && self.map.isDoor(x, y)) {
-                        var dest = self.map.getDoorDestination(x, y);
-
-                        self.player.setGridPosition(dest.x, dest.y);
-                        self.player.nextGridX = dest.x;
-                        self.player.nextGridY = dest.y;
-                        self.player.turnTo(dest.orientation);
-                        self.client.sendTeleport(dest.x, dest.y);
-
-                        if(self.renderer.mobile && dest.cameraX && dest.cameraY) {
-                            self.camera.setGridPosition(dest.cameraX, dest.cameraY);
-                            self.resetZone();
-                        } else {
-                            if(dest.portal) {
-                                self.assignBubbleTo(self.player);
-                            } else {
-                                self.camera.focusEntity(self.player);
-                                self.resetZone();
-                            }
-                        }
-
-                        if(_.size(self.player.attackers) > 0) {
-                            setTimeout(function() { self.tryUnlockingAchievement("COWARD"); }, 500);
-                        }
-                        self.player.forEachAttacker(function(attacker) {
-                            attacker.disengage();
-                            attacker.idle();
-                        });
-
-                        self.updatePlateauMode();
-
-                        self.checkUndergroundAchievement();
-
-                        if(self.renderer.mobile || self.renderer.tablet) {
-                            // When rendering with dirty rects, clear the whole screen when entering a door.
-                            self.renderer.clearScreen(self.renderer.context);
-                        }
-
-                        if(dest.portal) {
-                            self.audioManager.playSound("teleport");
-                        }
-
-                        if(!self.player.isDead) {
-                            self.audioManager.updateMusic();
-                        }
+                        teleportedViaDoor = self.executeDoorTeleport(x, y, 'STOP_PATHING');
                     }
 
                     if(self.player.target instanceof Npc) {
@@ -1076,8 +1098,10 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
                         }
                     });
 
-                    self.unregisterEntityPosition(self.player);
-                    self.registerEntityPosition(self.player);
+                    if(!teleportedViaDoor) {
+                        self.unregisterEntityPosition(self.player);
+                        self.registerEntityPosition(self.player);
+                    }
                 });
 
                 self.player.onRequestPath(function(x, y) {
@@ -1628,6 +1652,12 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
                         currentOrientation;
 
                     if(id === self.playerId && self.player) {
+                        if(self.doorDiagnostics) {
+                            self.doorDiagnostics.recordServerTeleport(x, y);
+                        }
+                        self.currentZoning = null;
+                        self.zoningQueue = [];
+                        self.previousClickPosition = {};
                         self.player.isDead = false;
                         self.player.path = null;
                         self.player.newDestination = null;
@@ -1642,10 +1672,15 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
                         self.player.setGridPosition(x, y);
                         self.player.nextGridX = x;
                         self.player.nextGridY = y;
+                        self._lastSentMoveX = x;
+                        self._lastSentMoveY = y;
                         self.registerEntityPosition(self.player);
                         self.resetCamera();
                         self.updatePlateauMode();
                         self.audioManager.playSound("teleport");
+                        if(self.app && typeof self.app.updateHubMapLiveStatus === 'function') {
+                            self.app.updateHubMapLiveStatus();
+                        }
                     } else if(id !== self.playerId) {
                         entity = self.getEntityById(id);
 
@@ -1695,6 +1730,7 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
 				});
 
                 self.client.onDisconnected(function(message) {
+                    self.stopPingLoop();
                     if(self.player) {
                         self.player.die();
                     }
@@ -1704,6 +1740,7 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
                 });
 
                 self.gamestart_callback();
+                self.startPingLoop();
 
                 if(self.hasNeverStarted) {
                     self.start();
@@ -1714,6 +1751,25 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
                     cb({success: true});
                 }
             });
+        },
+
+        startPingLoop: function() {
+            var self = this;
+            this.stopPingLoop();
+            var sendPing = function() {
+                if(self.started && self.client && self.player && !self.player.isDead) {
+                    self.client.sendHub('ping', { t: Date.now() });
+                }
+            };
+            setTimeout(sendPing, 300);
+            this.pingInterval = setInterval(sendPing, 2500);
+        },
+
+        stopPingLoop: function() {
+            if(this.pingInterval) {
+                clearInterval(this.pingInterval);
+                this.pingInterval = null;
+            }
         },
 
         /**
@@ -1994,11 +2050,54 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
             }
         },
 
-        /**
-         *
-         */
+        triggerAttackHaptic: function() {
+            var now = Date.now();
+            if(this._lastHapticTime && (now - this._lastHapticTime < 60)) {
+                return false;
+            }
+
+            var hasCapacitor = (typeof window !== 'undefined' && Boolean(window.Capacitor));
+            var isTouchDevice = Boolean(
+                hasCapacitor ||
+                (this.renderer && (this.renderer.mobile || this.renderer.tablet)) ||
+                (typeof window !== 'undefined' && ('ontouchstart' in window)) ||
+                (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0)
+            );
+
+            if(!isTouchDevice) {
+                return false;
+            }
+
+            this._lastHapticTime = now;
+
+            try {
+                if(hasCapacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics && typeof window.Capacitor.Plugins.Haptics.impact === 'function') {
+                    var res = window.Capacitor.Plugins.Haptics.impact({ style: 'LIGHT' });
+                    if(res && typeof res.catch === 'function') {
+                        res.catch(function() {});
+                    }
+                    return true;
+                }
+                if(hasCapacitor && typeof window.Capacitor.nativePromise === 'function') {
+                    var p = window.Capacitor.nativePromise('Haptics', 'impact', { style: 'LIGHT' });
+                    if(p && typeof p.catch === 'function') {
+                        p.catch(function() {});
+                    }
+                    return true;
+                }
+                if(typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+                    navigator.vibrate(15);
+                    return true;
+                }
+            } catch(e) {
+                // Ignore haptics errors on unsupported devices
+            }
+            return false;
+        },
+
         makePlayerAttack: function(mob) {
             this.createAttackLink(this.player, mob);
+            this.triggerAttackHaptic();
             this.client.sendAttack(mob);
         },
 
@@ -2281,6 +2380,7 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
                 x = mouse.x,
                 y = mouse.y;
 
+            this.hasMouseMoved = true;
             this.cursorVisible = true;
 
             if(this.player && !this.renderer.mobile && !this.renderer.tablet) {
@@ -2321,6 +2421,171 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
             }
         },
 
+        sendPlayerMoveIfChanged: function(x, y, source) {
+            if(!this.client) return false;
+            if(this._lastSentMoveX === x && this._lastSentMoveY === y) {
+                if(this.doorDiagnostics) {
+                    this.doorDiagnostics.recordGuard(
+                        'DEDUP_STOP_MOVE',
+                        'Paquet MOVE(' + x + ',' + y + ') redondant ignoré (' + (source || 'unknown') + ').',
+                        { x: x, y: y, source: source }
+                    );
+                }
+                return false;
+            }
+            this._lastSentMoveX = x;
+            this._lastSentMoveY = y;
+            this.client.sendMove(x, y);
+            return true;
+        },
+
+        executeDoorTeleport: function(x, y, triggerSource) {
+            var self = this;
+            if(!this.player || !this.map || !this.map.isDoor(x, y)) return false;
+            var dest = this.map.getDoorDestination(x, y);
+            if(!dest) return false;
+
+            var guardsApplied = [];
+            if(this.doorDiagnostics) {
+                this.doorDiagnostics.beginDoorTeleport(x, y, dest, triggerSource || 'STOP_PATHING');
+            }
+
+            if(this.currentZoning || (this.zoningQueue && this.zoningQueue.length > 0)) {
+                this.currentZoning = null;
+                this.zoningQueue = [];
+                guardsApplied.push('CLEAR_ZONING_ON_DOOR');
+                if(this.doorDiagnostics) {
+                    this.doorDiagnostics.recordGuard(
+                        'CLEAR_ZONING_ON_DOOR',
+                        'Transition de zone active annulée lors du passage de la porte (' + x + ',' + y + ').',
+                        { doorX: x, doorY: y }
+                    );
+                }
+            }
+
+            this.previousClickPosition = {};
+            guardsApplied.push('RESET_CLICK_LOCKOUT');
+
+            this.unregisterEntityPosition(this.player);
+            guardsApplied.push('ENTITY_GRID_CLEAN_UNREGISTER');
+            if(this.doorDiagnostics) {
+                this.doorDiagnostics.recordGuard(
+                    'ENTITY_GRID_CLEAN_UNREGISTER',
+                    'Nettoyage de entityGrid/renderingGrid sur (' + x + ',' + y + ') avant téléportation vers (' + dest.x + ',' + dest.y + ').',
+                    { fromX: x, fromY: y, toX: dest.x, toY: dest.y }
+                );
+            }
+
+            this.player.path = null;
+            this.player.newDestination = null;
+            if(this.player.movement && typeof this.player.movement.stop === 'function') {
+                this.player.movement.stop();
+            }
+            this.player.setGridPosition(dest.x, dest.y);
+            this.player.nextGridX = dest.x;
+            this.player.nextGridY = dest.y;
+            this.player.turnTo(dest.orientation);
+            this._lastSentMoveX = dest.x;
+            this._lastSentMoveY = dest.y;
+            this._lastDoorTeleportAt = Date.now();
+
+            this.registerEntityPosition(this.player);
+            this.client.sendTeleport(dest.x, dest.y);
+
+            if(this.renderer.mobile && this.camera.gridW <= 15 && dest.cameraX && dest.cameraY) {
+                this.camera.setGridPosition(dest.cameraX, dest.cameraY);
+                this.resetZone();
+            } else {
+                if(dest.portal) {
+                    this.assignBubbleTo(this.player);
+                } else {
+                    this.camera.focusEntity(this.player);
+                    this.resetZone();
+                }
+            }
+
+            if(_.size(this.player.attackers) > 0) {
+                setTimeout(function() { self.tryUnlockingAchievement("COWARD"); }, 500);
+            }
+            this.player.forEachAttacker(function(attacker) {
+                attacker.disengage();
+                attacker.idle();
+            });
+
+            this.updatePlateauMode();
+            this.checkUndergroundAchievement();
+            this.doorFadeStartTime = Date.now();
+            this.doorFadeDuration = 180;
+            this.renderer.clearScreen(this.renderer.context);
+
+            if(dest.portal) {
+                this.audioManager.playSound("teleport");
+            } else {
+                this.audioManager.playSound("chat");
+            }
+            if(!this.player.isDead) {
+                this.audioManager.updateMusic();
+            }
+
+            if(this.doorDiagnostics) {
+                this.doorDiagnostics.completeDoorTeleport(guardsApplied);
+            }
+            if(this.app && typeof this.app.updateHubMapLiveStatus === 'function') {
+                this.app.updateHubMapLiveStatus();
+            }
+            return true;
+        },
+
+        resolveDoorThresholdTarget: function(pos) {
+            if(!this.player || !this.map || !pos) return pos;
+            var px = this.player.gridX,
+                py = this.player.gridY,
+                standingOnDoor = this.map.isDoor(px, py),
+                cooldownElapsed = (Date.now() - (this._lastDoorTeleportAt || 0)) >= 350;
+
+            // 1. Si le joueur est déjà debout sur une porte (ex: tapis de sortie de maison) et clique dessus ou pousse vers le mur du seuil
+            if(standingOnDoor && !this.player.isMoving() && !this.player.hasTarget() && cooldownElapsed) {
+                var isSameTile = (pos.x === px && pos.y === py);
+                var isAdjacentBlockedThreshold = (Math.abs(pos.x - px) + Math.abs(pos.y - py) === 1) && this.map.isColliding(pos.x, pos.y);
+                if(isSameTile || isAdjacentBlockedThreshold) {
+                    if(this.doorDiagnostics) {
+                        this.doorDiagnostics.recordGuard(
+                            'STANDING_DOOR_EXIT_ASSIST',
+                            'Activation directe de la porte (' + px + ',' + py + ') depuis le tapis de seuil.',
+                            { playerX: px, playerY: py, inputX: pos.x, inputY: pos.y }
+                        );
+                    }
+                    this.executeDoorTeleport(px, py, 'STANDING_DOOR_EXIT_ASSIST');
+                    return null;
+                }
+            }
+
+            // 2. Si le joueur clique sur un mur de seuil adjacent (1 case) à une porte (ex: bord noir sous le tapis de sortie d'une maison)
+            if(this.map.isColliding(pos.x, pos.y)) {
+                var dirs = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+                for(var i = 0; i < dirs.length; i++) {
+                    var nx = pos.x + dirs[i][0],
+                        ny = pos.y + dirs[i][1];
+                    if(!this.map.isOutOfBounds(nx, ny) && this.map.isDoor(nx, ny) && !this.map.isColliding(nx, ny)) {
+                        var distToPlayer = Math.abs(nx - px) + Math.abs(ny - py);
+                        if(distToPlayer > 0 && distToPlayer <= 12) {
+                            if(this.doorDiagnostics) {
+                                this.doorDiagnostics.recordGuard(
+                                    'DOOR_THRESHOLD_SNAP_ASSIST',
+                                    'Clic seuil (' + pos.x + ',' + pos.y + ') redirigé vers la porte (' + nx + ',' + ny + ').',
+                                    { clickedX: pos.x, clickedY: pos.y, snappedX: nx, snappedY: ny }
+                                );
+                            }
+                            this.hoveringCollidingTile = false;
+                            return { x: nx, y: ny };
+                        }
+                    }
+                }
+            }
+
+            return pos;
+        },
+
         /**
          * Moves the player one space, if possible
          */
@@ -2328,8 +2593,11 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
             this.hoveringCollidingTile = false;
             this.hoveringPlateauTile = false;
 
-            if((pos.x === this.previousClickPosition.x
-            && pos.y === this.previousClickPosition.y) || this.isZoning()) {
+            if(this.isZoning()) {
+                return;
+            }
+            var standingOnDoor = Boolean(this.player && this.map && this.map.isDoor(this.player.gridX, this.player.gridY));
+            if(!standingOnDoor && pos.x === this.previousClickPosition.x && pos.y === this.previousClickPosition.y) {
                 return;
             } else {
                 if(!this.player.disableKeyboardNpcTalk)
@@ -2346,8 +2614,8 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
         {
             var pos = this.getMouseGridPosition();
 
-            if(pos.x === this.previousClickPosition.x
-            && pos.y === this.previousClickPosition.y) {
+            var standingOnDoor = Boolean(this.player && this.map && this.map.isDoor(this.player.gridX, this.player.gridY));
+            if(!standingOnDoor && pos.x === this.previousClickPosition.x && pos.y === this.previousClickPosition.y) {
                 return;
             } else {
                 this.previousClickPosition = pos;
@@ -2362,16 +2630,23 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
         processInput: function(pos) {
             var entity;
 
+            if(this.started && this.player && !this.player.isDead && !this.isZoning()) {
+                pos = this.resolveDoorThresholdTarget(pos);
+                if(!pos) {
+                    return;
+                }
+            }
+
             if(this.started
             && this.player
             && !this.isZoning()
-            && !this.isZoningTile(this.player.nextGridX, this.player.nextGridY)
+            && !(this.player.isMoving() && this.isZoningTile(this.player.nextGridX, this.player.nextGridY))
             && !this.player.isDead
             && !this.hoveringCollidingTile
             && !this.hoveringPlateauTile) {
                 entity = this.getEntityAt(pos.x, pos.y);
 
-        	    if(entity instanceof Mob || (entity instanceof Player && entity !== this.player && this.player.pvpFlag && this.pvpFlag)) {
+                if(entity instanceof Mob || (entity instanceof Player && entity !== this.player && this.player.pvpFlag && this.pvpFlag)) {
                     this.makePlayerAttack(entity);
                 }
                 else if(entity instanceof Item) {
@@ -2558,6 +2833,7 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
                             if(Types.isRangedWeapon && Types.isRangedWeapon(this.player.weapon) && character.hasTarget()) {
                                 this.spawnPlayerArrow(character, character.target);
                             }
+                            this.triggerAttackHaptic();
                             this.client.sendHit(character.target);
                         }
 
@@ -2995,38 +3271,8 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
         },
 
         checkOtherDirtyRects: function(r1, source, x, y) {
-            var r = this.renderer;
-
-            this.forEachEntityAround(x, y, 2, function(e2) {
-                if(source && source.id && e2.id === source.id) {
-                    return;
-                }
-                if(!e2.isDirty) {
-                    var r2 = r.getEntityBoundingRect(e2);
-                    if(r.isIntersecting(r1, r2)) {
-                        e2.setDirty();
-                    }
-                }
-            });
-
-            if(source && !(source.hasOwnProperty("index"))) {
-                this.forEachAnimatedTile(function(tile) {
-                    if(!tile.isDirty) {
-                        var r2 = r.getTileBoundingRect(tile);
-                        if(r.isIntersecting(r1, r2)) {
-                            tile.isDirty = true;
-                        }
-                    }
-                });
-            }
-
-            if(!this.drawTarget && this.selectedCellVisible) {
-                var targetRect = r.getTargetBoundingRect();
-                if(r.isIntersecting(r1, targetRect)) {
-                    this.drawTarget = true;
-                    this.renderer.targetRect = targetRect;
-                }
-            }
+            // Rendu plein écran unifié : pas de recalcul O(N²) des dirty rects
+            return;
         },
 
 	    tryLootingItem: function(item) {

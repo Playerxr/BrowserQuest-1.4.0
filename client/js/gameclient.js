@@ -12,6 +12,10 @@ define(['player', 'entityfactory', 'lib/bison'], function(Player, EntityFactory,
             this.movement_callback = null;
 
             this.fail_callback = null;
+            this.queue_callback = null;
+            this.isQueued = false;
+            this.queuePosition = 0;
+            this.queueTotal = 0;
 
             this.notify_callback = null;
 
@@ -145,7 +149,32 @@ define(['player', 'entityfactory', 'lib/bison'], function(Player, EntityFactory,
                 };
 
                 this.connection.onmessage = function(e) {
+                    if(typeof e.data === 'string' && (e.data === 'queue' || e.data.indexOf('queue:') === 0)) {
+                        var qParts = e.data.split(':');
+                        var qPos = qParts[1] ? parseInt(qParts[1], 10) : 1;
+                        var qTotal = qParts[2] ? parseInt(qParts[2], 10) : qPos;
+                        self.isQueued = true;
+                        self.queuePosition = isNaN(qPos) ? 1 : qPos;
+                        self.queueTotal = isNaN(qTotal) ? self.queuePosition : qTotal;
+                        if(self.connectionTimer) {
+                            clearTimeout(self.connectionTimer);
+                            self.connectionTimer = setTimeout(function() {
+                                failConnection('Le serveur ne répond pas. Réessayez dans quelques instants.');
+                            }, 30000);
+                        }
+                        if(self.queue_callback) {
+                            self.queue_callback(self.queuePosition, self.queueTotal);
+                        }
+                        return;
+                    }
                     if(e.data === "go") {
+                        self.isQueued = false;
+                        if(self.connectionTimer) {
+                            clearTimeout(self.connectionTimer);
+                            self.connectionTimer = setTimeout(function() {
+                                failConnection('Le serveur ne répond pas. Réessayez dans quelques instants.');
+                            }, 30000);
+                        }
                         if(self.connected_callback) {
                             self.connected_callback();
                         }
@@ -561,6 +590,10 @@ define(['player', 'entityfactory', 'lib/bison'], function(Player, EntityFactory,
 
         onConnected: function(callback) {
             this.connected_callback = callback;
+        },
+
+        onQueue: function(callback) {
+            this.queue_callback = callback;
         },
 
         onDisconnected: function(callback) {

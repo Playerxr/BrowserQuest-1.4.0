@@ -19,6 +19,8 @@ function plainObject(value) {
 // Every Hub action has an explicit payload. Reject unexpected keys as well as bad types.
 var hubSchemas = {
     refresh: {},
+    ping: { t: 'id' },
+    map_teleport: { destination: 'kind' },
     bag_equip: { slot: 'slot' },
     bag_drop: { slot: 'slot' },
     shop_buy: { itemKind: 'kind' },

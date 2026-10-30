@@ -198,8 +198,15 @@ WS.MultiVersionWebsocketServer = Server.extend({
             log.info('Serveur (HTTP + WebSocket) en écoute sur port ' + port + ' (0.0.0.0)');
         });
 
-        this._wss = new WebSocketServer({ server: this._httpServer, maxPayload: MAX_PAYLOAD });
+        this._wss = new WebSocketServer({
+            server: this._httpServer,
+            maxPayload: MAX_PAYLOAD,
+            perMessageDeflate: false
+        });
         this._wss.on('connection', function (socket, req) {
+            if (socket._socket && typeof socket._socket.setNoDelay === 'function') {
+                socket._socket.setNoDelay(true);
+            }
             socket.remoteAddress = remoteAddress(req, self._trustProxy);
             var c = new WS.wsConnection(self._createId(), socket, self);
             c.sessionId = crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString('hex');

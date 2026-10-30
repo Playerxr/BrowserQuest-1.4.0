@@ -38,7 +38,7 @@ define(function() {
 
                     i = Math.round(i);
 
-                    if(elapsed === this.duration || i === this.endValue) {
+                    if(elapsed >= this.duration) {
                         this.stop();
                         if(this.stopFunction) {
                             this.stopFunction();

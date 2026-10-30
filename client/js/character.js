@@ -212,7 +212,16 @@ define(['entity', 'transition', 'timer'], function(Entity, Transition, Timer) {
                         this.step_callback();
                     }
 
-                    if(this.hasChangedItsPath()) {
+                    if(this.step > 0 && !this.hasTarget() && this.check_door_callback && this.check_door_callback(this.gridX, this.gridY)) {
+                        if(this.hasChangedItsPath() || this.hasNextStep()) {
+                            if(this.door_stop_guard_callback) {
+                                this.door_stop_guard_callback(this.gridX, this.gridY, this.hasChangedItsPath(), this.hasNextStep());
+                            }
+                        }
+                        this.newDestination = null;
+                        stop = true;
+                    }
+                    else if(this.hasChangedItsPath()) {
                         x = this.newDestination.x;
                         y = this.newDestination.y;
                         path = this.requestPathfindingTo(x, y);
@@ -245,6 +254,14 @@ define(['entity', 'transition', 'timer'], function(Entity, Transition, Timer) {
             }
         },
 
+        onCheckDoor: function(callback) {
+            this.check_door_callback = callback;
+        },
+
+        onDoorStopGuard: function(callback) {
+            this.door_stop_guard_callback = callback;
+        },
+
         onBeforeStep: function(callback) {
             this.before_step_callback = callback;
         },
@@ -258,7 +275,7 @@ define(['entity', 'transition', 'timer'], function(Entity, Transition, Timer) {
         },
 
         hasNextStep: function() {
-            return (this.path.length - 1 > this.step);
+            return Boolean(this.path && (this.path.length - 1 > this.step));
         },
 
         hasChangedItsPath: function() {

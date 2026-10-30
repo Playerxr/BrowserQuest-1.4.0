@@ -241,4 +241,74 @@ test('Capacitor Android APK (com.universnovastudio.novaquest) overrides localhos
     assert.equal(urls[0], 'wss://quest.universnovastudio.online/');
 });
 
+test('Capacitor Haptics API triggers light vibration (LIGHT) on mobile touch attacks and skips desktop', () => {
+    const impacts = [];
+    const vibrations = [];
+    let GameClass;
+    let fakeNow = 10000;
 
+    function Dummy() {}
+    const context = {
+        Class,
+        Types,
+        Date: { now: () => fakeNow },
+        window: {
+            Capacitor: {
+                Plugins: {
+                    Haptics: {
+                        impact(opts) {
+                            impacts.push(opts);
+                            return Promise.resolve();
+                        }
+                    }
+                }
+            }
+        },
+        navigator: {
+            maxTouchPoints: 5,
+            vibrate(ms) { vibrations.push(ms); return true; }
+        },
+        log: global.log,
+        _: require('underscore'),
+        define(deps, factory) {
+            const stubs = deps.map(() => Dummy);
+            GameClass = factory(...stubs);
+        }
+    };
+
+    vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../client/js/game.js'), 'utf8'), context);
+
+    const game = Object.create(GameClass.prototype);
+    game.renderer = { mobile: true, tablet: false };
+    game.player = { hasTarget: () => false, engage() {} };
+    game.playerId = 1;
+    game.client = { sendAttack() {} };
+
+    // 1. Mobile attack triggers Capacitor Haptics.impact({ style: 'LIGHT' })
+    game.makePlayerAttack({ id: 99, addAttacker() {} });
+    assert.equal(impacts.length, 1);
+    assert.equal(impacts[0].style, 'LIGHT');
+
+    // 2. Immediate duplicate call within 60ms is debounced
+    fakeNow += 20;
+    assert.equal(game.triggerAttackHaptic(), false);
+    assert.equal(impacts.length, 1);
+
+    // 3. Call after 60ms cooldown triggers again
+    fakeNow += 60;
+    assert.equal(game.triggerAttackHaptic(), true);
+    assert.equal(impacts.length, 2);
+
+    // 4. Fallback to navigator.vibrate(15) on mobile web when Capacitor is absent
+    delete context.window.Capacitor;
+    fakeNow += 100;
+    assert.equal(game.triggerAttackHaptic(), true);
+    assert.deepEqual(vibrations, [15]);
+
+    // 5. Desktop non-touch environment does not vibrate
+    game.renderer = { mobile: false, tablet: false };
+    context.navigator.maxTouchPoints = 0;
+    fakeNow += 100;
+    assert.equal(game.triggerAttackHaptic(), false);
+    assert.equal(vibrations.length, 1);
+});

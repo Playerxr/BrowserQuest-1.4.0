@@ -208,16 +208,18 @@ define(['jquery', 'storage'], function($, Storage) {
             }
         },
 
-        openGoogleNameChooser: function(idToken, suggestedName, email) {
+        openGoogleNameChooser: function(idToken, suggestedName, email, providerType) {
             var self = this;
             this.pendingGoogleAuth = {
                 idToken: idToken,
-                email: email || ''
+                email: email || '',
+                provider: providerType || 'google'
             };
 
-            $('.google-auth-btn').removeClass('loading').prop('disabled', false);
+            $('.google-auth-btn, .play-games-auth-btn').removeClass('loading').prop('disabled', false);
             $('#google-login-btn .google-text').text("Se connecter avec Google");
             $('#google-signup-btn .google-text').text("Créer avec Google");
+            $('.play-games-auth-btn .play-games-text').text("Google Play Jeux");
             $('#google-name-submit').removeClass('loading');
             $('#google-name-submit .link').text("Entrer dans l'Aventure");
             $('#google-name-submit .google-play-spinner').hide();
@@ -225,8 +227,10 @@ define(['jquery', 'storage'], function($, Storage) {
             this.clearValidationErrors();
             $('#google-name-validation').empty();
 
+            var isPlayGames = (providerType === 'playgames');
+            var providerLabel = isPlayGames ? 'Play Jeux' : 'Google';
             var cleanSuggested = String(suggestedName || '').replace(/[^a-zA-Z0-9_\-\u00C0-\u017F]/g, '').trim().substr(0, 12);
-            $('#google-verified-email').text(email ? ('Google : ' + email) : 'Compte Google authentifié');
+            $('#google-verified-email').text(email ? (providerLabel + ' : ' + email) : ('Compte ' + providerLabel + ' authentifié'));
             $('#parchment').addClass('google-choose-name');
             $('#google-name-chooser').show();
 
@@ -296,9 +300,10 @@ define(['jquery', 'storage'], function($, Storage) {
             var cleanPreferred = String(preferredName || '').replace(/[^a-zA-Z0-9_\-\u00C0-\u017F]/g, '').trim().substr(0, 12);
 
             var resetBtns = function() {
-                $('.google-auth-btn').removeClass('loading').prop('disabled', false);
+                $('.google-auth-btn, .play-games-auth-btn').removeClass('loading').prop('disabled', false);
                 $('#google-login-btn .google-text').text("Se connecter avec Google");
                 $('#google-signup-btn .google-text').text("Créer avec Google");
+                $('.play-games-auth-btn .play-games-text').text("Google Play Jeux");
                 $('#google-name-submit').removeClass('loading');
                 $('#google-name-submit .link').text("Entrer dans l'Aventure");
                 $('#google-name-submit .google-play-spinner').hide();
@@ -371,20 +376,31 @@ define(['jquery', 'storage'], function($, Storage) {
             try { localStorage.removeItem('nova_google_fallback_uid'); } catch(e) {}
 
             var resetGoogleBtns = function() {
-                $('.google-auth-btn').removeClass('loading').prop('disabled', false);
+                if(self._mobilePollTimer) {
+                    clearInterval(self._mobilePollTimer);
+                    self._mobilePollTimer = null;
+                }
+                $('.google-auth-btn, .play-games-auth-btn').removeClass('loading').prop('disabled', false);
                 $('#google-login-btn .google-text').text("Se connecter avec Google");
                 $('#google-signup-btn .google-text').text("Créer avec Google");
+                $('.play-games-auth-btn .play-games-text').text("Google Play Jeux");
                 self.setPlayButtonState(true);
             };
 
             var clearPendingFlags = function() {
                 try { sessionStorage.removeItem('nova_google_pending'); } catch(e) {}
                 try { localStorage.removeItem('nova_google_pending'); } catch(e) {}
+                try { localStorage.removeItem('nova_google_provider'); } catch(e) {}
             };
 
-            var setPendingFlags = function() {
+            var setPendingFlags = function(providerType) {
                 try { sessionStorage.setItem('nova_google_pending', '1'); } catch(e) {}
                 try { localStorage.setItem('nova_google_pending', '1'); } catch(e) {}
+                try { localStorage.setItem('nova_google_provider', providerType || 'google'); } catch(e) {}
+            };
+
+            var getPendingProvider = function() {
+                try { return localStorage.getItem('nova_google_provider') || 'google'; } catch(e) { return 'google'; }
             };
 
             var hasPendingFlags = function() {
@@ -411,8 +427,9 @@ define(['jquery', 'storage'], function($, Storage) {
                 window.addEventListener('focus', onVisible);
             };
 
-            var presentGoogleNameStep = function(user) {
+            var presentGoogleNameStep = function(user, providerType) {
                 if(!user || (self.game && self.game.started)) return Promise.resolve();
+                var pType = providerType || getPendingProvider();
                 clearPendingFlags();
                 return new Promise(function(resolve) {
                     runWhenTabVisible(function() {
@@ -421,37 +438,127 @@ define(['jquery', 'storage'], function($, Storage) {
                             var savedName = '';
                             try { savedName = localStorage.getItem('nova_google_fallback_name') || ''; } catch(e) {}
                             var suggested = prefName || savedName || user.displayName || '';
-                            self.openGoogleNameChooser(idToken, suggested, user.email || '');
+                            self.openGoogleNameChooser(idToken, suggested, user.email || '', pType);
                             resolve();
                         }).catch(function(err) {
                             resetGoogleBtns();
-                            self.showGoogleAlert("Impossible de valider la session Google. Veuillez réessayer.");
+                            self.showGoogleAlert("Impossible de valider la session. Veuillez réessayer.");
                             resolve();
                         });
                     });
                 });
             };
 
-            var triggerGoogleAuth = function(forceRedirect) {
+            // Ouverture du pont d'authentification dans le navigateur système mobile (Chrome Custom Tab / Safari)
+            // afin d'utiliser le compte Google / Play Jeux déjà connecté sur le téléphone sans ressaisir Gmail + code.
+            var startMobileBrowserBridgeAuth = function(providerType) {
+                var isPlayGames = (providerType === 'playgames');
+                var label = isPlayGames ? 'Play Jeux' : 'Google';
+                var sessionKey = 'nq_' + Date.now() + '_' + Math.random().toString(36).substr(2, 10);
+                try { localStorage.setItem('nova_mobile_auth_key', sessionKey); } catch(e) {}
+
+                var isCap = Boolean(window.Capacitor || /^capacitor:|^file:/i.test(window.location.protocol));
+                var baseHost = (self.game && self.game.host && self.game.host !== 'localhost')
+                    ? ('https://' + self.game.host)
+                    : (isCap ? 'https://quest.universnovastudio.online' : window.location.origin);
+                var bridgeUrl = baseHost + '/auth/mobile-bridge?key=' + encodeURIComponent(sessionKey) + '&provider=' + encodeURIComponent(providerType || 'google');
+                var pollUrl = baseHost + '/api/auth/mobile-session?key=' + encodeURIComponent(sessionKey);
+
+                if(isPlayGames) {
+                    $('.play-games-auth-btn').addClass('loading').find('.play-games-text').text("Navigateur Play Jeux...");
+                } else {
+                    $('.google-auth-btn').addClass('loading').find('.google-text').text("Navigateur Google...");
+                }
+                self.setPlayButtonState(false);
+
+                // Ouvrir dans le navigateur système du téléphone (Chrome Custom Tabs sur Capacitor ou _blank système)
+                try {
+                    if(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser && typeof window.Capacitor.Plugins.Browser.open === 'function') {
+                        window.Capacitor.Plugins.Browser.open({ url: bridgeUrl });
+                    } else {
+                        window.open(bridgeUrl, '_blank');
+                    }
+                } catch(e) {
+                    window.open(bridgeUrl, '_blank');
+                }
+
+                var pollStart = Date.now();
+                if(self._mobilePollTimer) clearInterval(self._mobilePollTimer);
+
+                var checkMobileSession = function() {
+                    if(self.game && self.game.started) {
+                        clearInterval(self._mobilePollTimer);
+                        self._mobilePollTimer = null;
+                        return;
+                    }
+                    if(Date.now() - pollStart > 240000) {
+                        resetGoogleBtns();
+                        return;
+                    }
+                    $.ajax({
+                        url: pollUrl,
+                        method: 'GET',
+                        dataType: 'json',
+                        cache: false,
+                        success: function(data) {
+                            if(data && data.completed && data.idToken) {
+                                clearInterval(self._mobilePollTimer);
+                                self._mobilePollTimer = null;
+                                try { localStorage.removeItem('nova_mobile_auth_key'); } catch(e) {}
+                                try {
+                                    if(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser && typeof window.Capacitor.Plugins.Browser.close === 'function') {
+                                        window.Capacitor.Plugins.Browser.close();
+                                    }
+                                } catch(e) {}
+                                var prefName = (self.getUsernameField && self.getUsernameField().length) ? String(self.getUsernameField().val() || '').trim() : '';
+                                var savedName = '';
+                                try { savedName = localStorage.getItem('nova_google_fallback_name') || ''; } catch(e) {}
+                                var suggested = prefName || savedName || data.displayName || '';
+                                self.openGoogleNameChooser(data.idToken, suggested, data.email || '', data.provider || providerType || 'google');
+                            }
+                        }
+                    });
+                };
+
+                self._mobilePollTimer = setInterval(checkMobileSession, 1200);
+                self._checkMobileSessionNow = checkMobileSession;
+            };
+
+            window.addEventListener('message', function(ev) {
+                if(ev && ev.data && ev.data.type === 'nova-mobile-auth-complete' && typeof self._checkMobileSessionNow === 'function') {
+                    self._checkMobileSessionNow();
+                }
+            });
+
+            var triggerGoogleAuth = function(forceExternalBrowser, providerType) {
+                var pType = providerType || 'google';
+                var isPlayGames = (pType === 'playgames');
                 self.clearValidationErrors();
                 $('#google-alert-banner').hide().empty();
 
-                if(!window.firebase || typeof firebase.auth !== 'function') {
-                    self.showGoogleAlert("Le service d'authentification Google (Firebase) n'est pas disponible. Rechargez la page.");
+                var ua = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '';
+                var isCapacitorApp = Boolean(window.Capacitor || /NovaQuestMobile/i.test(ua) || /^capacitor:|^file:/i.test(window.location.protocol));
+                var isMobileDevice = isCapacitorApp || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(ua) ||
+                                     (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 1 && window.innerWidth <= 1024);
+
+                // Sur APK Android / Mobile ou clic sur "Connexion rapide via le navigateur du téléphone" :
+                // passer par le pont du navigateur système afin d'utiliser le compte Google / Play Jeux déjà connecté
+                if(isCapacitorApp || forceExternalBrowser) {
+                    startMobileBrowserBridgeAuth(pType);
                     return;
                 }
 
-                var $btns = $('.google-auth-btn');
-                $btns.addClass('loading');
-                $btns.find('.google-text').text("Authentification Google...");
+                if(!window.firebase || typeof firebase.auth !== 'function') {
+                    startMobileBrowserBridgeAuth(pType);
+                    return;
+                }
+
+                if(isPlayGames) {
+                    $('.play-games-auth-btn').addClass('loading').find('.play-games-text').text("Connexion Play Jeux...");
+                } else {
+                    $('.google-auth-btn').addClass('loading').find('.google-text').text("Authentification Google...");
+                }
                 self.setPlayButtonState(false);
-
-                var isInIframe = false;
-                try { isInIframe = (window.self !== window.top); } catch(e) { isInIframe = true; }
-
-                var ua = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '';
-                var isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(ua) ||
-                                     (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 1 && window.innerWidth <= 1024);
 
                 try {
                     var authInstance = firebase.auth();
@@ -460,27 +567,10 @@ define(['jquery', 'storage'], function($, Storage) {
                         provider.setCustomParameters({ prompt: 'select_account' });
                     }
 
-                    // Sur mobile ou via le lien "Connexion Google directe" (hors iframe), utiliser la redirection dans le MÊME onglet
-                    // afin de ne jamais dépendre d'un onglet en arrière-plan suspendu par le téléphone
-                    if((forceRedirect || isMobileDevice) && !isInIframe) {
-                        $btns.find('.google-text').text("Redirection vers Google...");
-                        setPendingFlags();
-                        authInstance.signInWithRedirect(provider).catch(function(err) {
-                            clearPendingFlags();
-                            resetGoogleBtns();
-                            if(err && err.code === 'auth/unauthorized-domain') {
-                                self.showGoogleAlert("Domaine non autorisé dans Firebase Console (" + window.location.hostname + ").");
-                            } else {
-                                self.showGoogleAlert("Erreur de redirection Google : " + (err && (err.message || err.code) ? (err.message || err.code) : "inconnue"));
-                            }
-                        });
-                        return;
-                    }
-
-                    setPendingFlags();
+                    setPendingFlags(pType);
                     authInstance.signInWithPopup(provider).then(function(result) {
                         if(result && result.user) {
-                            return presentGoogleNameStep(result.user);
+                            return presentGoogleNameStep(result.user, pType);
                         }
                         resetGoogleBtns();
                     }).catch(function(error) {
@@ -488,33 +578,30 @@ define(['jquery', 'storage'], function($, Storage) {
                         resetGoogleBtns();
                         if(!error) return;
 
-                        console.warn("[Google Auth]", error.code || error.message);
+                        console.warn("[Auth]", error.code || error.message);
 
-                        // Si le navigateur mobile ou desktop bloque la popup, basculer sur la redirection dans le même onglet
-                        if((error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request') && !isInIframe) {
-                            $btns.addClass('loading');
-                            $btns.find('.google-text').text("Redirection vers Google...");
-                            setPendingFlags();
-                            authInstance.signInWithRedirect(provider);
+                        // Si la popup est bloquée ou sur navigateur mobile intégré, ouvrir le pont navigateur système
+                        if(error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request' || error.code === 'auth/operation-not-supported-in-this-environment' || isMobileDevice) {
+                            startMobileBrowserBridgeAuth(pType);
                             return;
                         }
 
                         if(error.code === 'auth/popup-closed-by-user') {
-                            self.showGoogleAlert("Authentification annulée. Sur mobile, cliquez sur 'Connexion Google directe' ci-dessous.");
+                            self.showGoogleAlert("Authentification annulée. Sur mobile, cliquez sur 'Connexion rapide via le navigateur du téléphone'.");
                             return;
                         }
 
                         if(error.code === 'auth/unauthorized-domain') {
-                            self.showGoogleAlert("Ce domaine (" + window.location.hostname + ") doit être ajouté dans Firebase Console > Authentication > Settings > Authorized domains.");
+                            startMobileBrowserBridgeAuth(pType);
                             return;
                         }
 
-                        self.showGoogleAlert("Erreur Google : " + (error.message || error.code));
+                        self.showGoogleAlert("Erreur d'authentification : " + (error.message || error.code));
                     });
                 } catch(syncErr) {
                     clearPendingFlags();
                     resetGoogleBtns();
-                    self.showGoogleAlert("Erreur lors de l'ouverture de Google Auth : " + (syncErr.message || syncErr));
+                    startMobileBrowserBridgeAuth(pType);
                 }
             };
 
@@ -522,32 +609,31 @@ define(['jquery', 'storage'], function($, Storage) {
                 try {
                     firebase.auth().getRedirectResult().then(function(result) {
                         if(result && result.user) {
-                            presentGoogleNameStep(result.user);
+                            presentGoogleNameStep(result.user, getPendingProvider());
                         }
                     }).catch(function(err) {
                         clearPendingFlags();
                         resetGoogleBtns();
-                        if(err && err.code && err.code !== 'auth/credential-already-in-use') {
-                            self.showGoogleAlert("Erreur au retour de Google : " + (err.message || err.code));
-                        }
                     });
                 } catch(e) {}
 
                 try {
                     firebase.auth().onAuthStateChanged(function(user) {
                         if(user && hasPendingFlags() && (!self.game || !self.game.started)) {
-                            presentGoogleNameStep(user);
+                            presentGoogleNameStep(user, getPendingProvider());
                         }
                     });
                 } catch(e) {}
 
-                // Au retour sur l'onglet mobile après authentification, vérifier si l'utilisateur est connecté
                 var checkOnFocus = function() {
                     if(document.hidden || (self.game && self.game.started)) return;
+                    if(typeof self._checkMobileSessionNow === 'function') {
+                        self._checkMobileSessionNow();
+                    }
                     if(hasPendingFlags() && window.firebase && typeof firebase.auth === 'function') {
                         var u = firebase.auth().currentUser;
                         if(u) {
-                            presentGoogleNameStep(u);
+                            presentGoogleNameStep(u, getPendingProvider());
                         }
                     }
                 };
@@ -559,13 +645,20 @@ define(['jquery', 'storage'], function($, Storage) {
                 e.preventDefault();
                 var $btn = $(this);
                 if($btn.hasClass('loading') || self.starting) return;
-                triggerGoogleAuth(false);
+                triggerGoogleAuth(false, 'google');
+            });
+
+            $(document).on('click', '.play-games-auth-btn', function(e) {
+                e.preventDefault();
+                var $btn = $(this);
+                if($btn.hasClass('loading') || self.starting) return;
+                triggerGoogleAuth(false, 'playgames');
             });
 
             $(document).on('click', '.google-redirect-btn', function(e) {
                 e.preventDefault();
                 if(self.starting) return;
-                triggerGoogleAuth(true);
+                triggerGoogleAuth(true, 'google');
             });
 
             $(document).on('click', '#google-name-submit', function(e) {
@@ -617,12 +710,45 @@ define(['jquery', 'storage'], function($, Storage) {
             }
         },
         
+        showQueueStatus: function(position, total) {
+            var posNum = (typeof position === 'number' && position > 0) ? position : 1;
+            var totalNum = (typeof total === 'number' && total >= posNum) ? total : posNum;
+            var message = 'Waiting in line... (' + posNum + '/' + totalNum + ')';
+
+            this.isWaitingInQueue = true;
+            this.queuePosition = posNum;
+            this.queueTotal = totalNum;
+            this.queueMessage = message;
+            this._startingTimestamp = Date.now() + 120000;
+
+            var $playButton = this.getPlayButton ? this.getPlayButton() : null;
+            if($playButton && typeof $playButton.text === 'function') {
+                $playButton.text('Waiting in line...');
+            }
+            $('#google-name-submit .link').text('Waiting in line...');
+
+            $('.queue-status-message').remove();
+            $('<span/>', {
+                'class': 'queue-status-message validation-error blink',
+                text: message
+            }).appendTo('.validation-summary');
+        },
+
+        hideQueueStatus: function() {
+            this.isWaitingInQueue = false;
+            this.queuePosition = 0;
+            this.queueTotal = 0;
+            this.queueMessage = null;
+            $('.queue-status-message').remove();
+        },
+
         setPlayButtonState: function(enabled) {
             var self = this;
             var $playButton = this.getPlayButton();
 
             if(enabled) {
                 this.starting = false;
+                this.hideQueueStatus();
                 this.$play.removeClass('loading');
                 if(this.playButtonRestoreText) {
                     $playButton.text(this.playButtonRestoreText);
@@ -631,8 +757,10 @@ define(['jquery', 'storage'], function($, Storage) {
                 // Loading state
                 this.starting = true;
                 this.$play.addClass('loading');
-                this.playButtonRestoreText = $playButton.text();
-                $playButton.text('Chargement...');
+                if(!this.isWaitingInQueue) {
+                    this.playButtonRestoreText = $playButton.text();
+                }
+                $playButton.text(this.isWaitingInQueue ? 'Waiting in line...' : 'Chargement...');
             }
         },
 
@@ -771,6 +899,7 @@ define(['jquery', 'storage'], function($, Storage) {
         //Init the hud that makes it show what creature you are mousing over and attacking
         initTargetHud: function(){
             var self = this;
+            if(!this.game || !this.game.player) return;
             var scale = self.game.renderer.getScaleFactor(),
                 healthMaxWidth = $("#inspector .health").width() - (12 * scale),
                 timeout;
@@ -861,12 +990,29 @@ define(['jquery', 'storage'], function($, Storage) {
         },
 
         initHealthBar: function() {
-            var scale = this.game.renderer.getScaleFactor(),
-                healthMaxWidth = $("#healthbar").width() - (12 * scale);
+            var self = this;
+            var updateHpWidth = function(hp, maxHp) {
+                var scale = (self.game && self.game.renderer) ? self.game.renderer.getScaleFactor() : 2;
+                var hbWidth = $("#healthbar").width() || 120;
+                var isCompactMobileBar = ($(window).width() <= 1000) || $('body').hasClass('touch-device');
+                var inset = isCompactMobileBar ? 4 : (12 * scale);
+                var healthMaxWidth = Math.max(40, hbWidth - inset);
+                var safeMax = (maxHp && maxHp > 0) ? maxHp : 1;
+                var safeHp = (hp && hp > 0) ? Math.min(hp, safeMax) : 0;
+                var barWidth = Math.round((healthMaxWidth / safeMax) * safeHp);
+                $("#hitpoints").css('width', barWidth + "px");
+            };
 
             this.game.onPlayerHealthChange(function(hp, maxHp) {
-                var barWidth = Math.round((healthMaxWidth / maxHp) * (hp > 0 ? hp : 0));
-                $("#hitpoints").css('width', barWidth + "px");
+                self._lastHp = hp;
+                self._lastMaxHp = maxHp;
+                updateHpWidth(hp, maxHp);
+            });
+
+            $(window).bind('resize.novaHealthBar', function() {
+                if (typeof self._lastHp === 'number' && typeof self._lastMaxHp === 'number') {
+                    updateHpWidth(self._lastHp, self._lastMaxHp);
+                }
             });
 
             this.game.onPlayerHurt(this.blinkHealthBar.bind(this));
@@ -1346,6 +1492,9 @@ define(['jquery', 'storage'], function($, Storage) {
                 $(this).addClass('active');
                 $('.hub-panel').removeClass('active').hide();
                 $('#hub-panel-' + tab).addClass('active').show();
+                if(tab === 'map') {
+                    self.updateHubMapLiveStatus();
+                }
                 if(self.game && self.game.client) {
                     self.game.client.sendHub('refresh', {});
                 }
@@ -1455,6 +1604,27 @@ define(['jquery', 'storage'], function($, Storage) {
                 }
             });
 
+            // Bouton rapide "Sortir de la maison" sur l'onglet Carte
+            $('#hub-map-exit-house-btn').click(function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if(self.game && self.game.client) {
+                    self.game.client.sendHub('map_teleport', { destination: 'exit_house' });
+                    $('#nova-hub').removeClass('active');
+                    $('#achievementsbutton').removeClass('active');
+                }
+            });
+
+            // Sélection directe d'un contrat de chasse PNJ
+            $(document).delegate('.hub-npc-quest-btn', 'click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var questId = $(this).attr('data-quest');
+                if(questId && self.game && self.game.client) {
+                    self.game.client.sendHub('npc_quest_start', { questId: questId });
+                }
+            });
+
             // Réglages & Personnalisation du Joystick
             $('#setting-pad-scale').bind('input change', function(e) {
                 e.stopPropagation();
@@ -1479,13 +1649,73 @@ define(['jquery', 'storage'], function($, Storage) {
 
             $('#setting-pad-reset-btn').click(function(e) {
                 e.stopPropagation();
-                self.setPadScale(130);
-                self.setPadOpacity(95);
-                self.setDisableTouchMove(true);
+                self.setPadScale(100);
+                self.setPadOpacity(90);
+                self.setDisableTouchMove(false);
             });
 
             // Contrôles Tactiles (Joystick Virtuel + Boutons de Combat)
             this.initMobileCombatControls();
+
+            // Outil de Diagnostic Portes & Maisons (Bouton HUD + Raccourci F9)
+            $('#nova-door-diag-overlay').click(function(e) {
+                e.stopPropagation();
+            });
+            $('#nova-door-diag-btn').click(function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if(self.game && self.game.doorDiagnostics) {
+                    self.game.doorDiagnostics.toggleOverlay();
+                }
+            });
+            $('#nova-door-diag-close-btn').click(function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if(self.game && self.game.doorDiagnostics) {
+                    self.game.doorDiagnostics.toggleOverlay(false);
+                } else {
+                    $('#nova-door-diag-overlay').hide();
+                }
+            });
+            $('#nova-door-diag-clear-btn').click(function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if(self.game && self.game.doorDiagnostics) {
+                    self.game.doorDiagnostics.clear();
+                }
+            });
+            $('#nova-door-diag-audit-btn').click(function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if(self.game && self.game.doorDiagnostics) {
+                    self.game.doorDiagnostics.auditMapDoors();
+                    self.game.doorDiagnostics.renderOverlay();
+                    self.game.doorDiagnostics.postToServer('manual_audit');
+                }
+            });
+            $('#nova-door-diag-copy-btn').click(function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if(self.game && self.game.doorDiagnostics) {
+                    var jsonStr = self.game.doorDiagnostics.exportJson();
+                    self.game.doorDiagnostics.postToServer('manual_export');
+                    if(navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(jsonStr).catch(function() {});
+                    }
+                    var $btn = $(this);
+                    var oldText = $btn.text();
+                    $btn.text('Copié !');
+                    setTimeout(function() { $btn.text(oldText); }, 1200);
+                }
+            });
+            $(document).bind('keydown.novaDoorDiag', function(e) {
+                if(e.which === 120 || e.key === 'F9') {
+                    e.preventDefault();
+                    if(self.game && self.game.doorDiagnostics) {
+                        self.game.doorDiagnostics.toggleOverlay();
+                    }
+                }
+            });
 
             // Admin : Annonce serveur
             $('#hub-admin-announce-btn').click(function(e) {
@@ -1613,7 +1843,7 @@ define(['jquery', 'storage'], function($, Storage) {
             this.isTouchDevice = this.detectTouchDevice();
 
             self.setPadScale = function(scalePercent) {
-                scalePercent = Math.max(70, Math.min(220, parseInt(scalePercent, 10) || 115));
+                scalePercent = Math.max(70, Math.min(220, parseInt(scalePercent, 10) || 100));
                 self.padScale = scalePercent;
                 document.documentElement.style.setProperty('--pad-scale', (scalePercent / 100).toFixed(2));
                 $('#setting-pad-scale').val(scalePercent);
@@ -1646,7 +1876,7 @@ define(['jquery', 'storage'], function($, Storage) {
             }
 
             // Charger préférences ou appliquer défauts (tap-to-move activé par défaut : disableTouchMove = false)
-            var savedScale = parseInt(localStorage.getItem('nova_pad_scale') || '115', 10);
+            var savedScale = parseInt(localStorage.getItem('nova_pad_scale') || '100', 10);
             var savedOpacity = parseInt(localStorage.getItem('nova_pad_opacity') || '90', 10);
             var savedTouchMove = localStorage.getItem('nova_disable_touch_move') === 'true';
             self.setPadScale(savedScale);
@@ -1657,6 +1887,8 @@ define(['jquery', 'storage'], function($, Storage) {
                 $('body').addClass('touch-device');
                 $('#mobile-controls').addClass('visible');
                 $('#touch-controls-toggle').addClass('active');
+                $('#nova-inventory').addClass('collapsed');
+                $('#inventory-toggle').removeClass('active');
             } else {
                 $('body').removeClass('touch-device');
                 $('#mobile-controls').removeClass('visible');
@@ -1670,6 +1902,8 @@ define(['jquery', 'storage'], function($, Storage) {
                     $('body').addClass('touch-device');
                     $('#mobile-controls').addClass('visible');
                     $('#touch-controls-toggle').addClass('active');
+                    $('#nova-inventory').addClass('collapsed');
+                    $('#inventory-toggle').removeClass('active');
                 }
             });
 
@@ -1809,6 +2043,9 @@ define(['jquery', 'storage'], function($, Storage) {
                 e.stopPropagation();
                 $(this).addClass('pressed');
                 if(self.game && self.game.started) {
+                    if(typeof self.game.triggerAttackHaptic === 'function') {
+                        self.game.triggerAttackHaptic();
+                    }
                     self.game.makePlayerInteractClosest();
                 }
             }).bind('touchend touchcancel mouseup mouseleave', function(e) {
@@ -1859,10 +2096,54 @@ define(['jquery', 'storage'], function($, Storage) {
                 return;
             }
 
+            if(subAction === 'pong') {
+                var sentAt = Number(payload && payload.t) || 0;
+                if(sentAt > 0) {
+                    var rtt = Math.max(1, Date.now() - sentAt);
+                    if(typeof this._smoothedPing === 'number') {
+                        this._smoothedPing = Math.round(this._smoothedPing * 0.65 + rtt * 0.35);
+                    } else {
+                        this._smoothedPing = rtt;
+                    }
+                    var pingMs = this._smoothedPing;
+                    var $pingHud = $('#nova-ping-hud');
+                    $('#nova-ping-value').text(pingMs + ' ms');
+                    $pingHud.removeClass('ping-good ping-warn ping-bad');
+                    if(pingMs < 80) {
+                        $pingHud.addClass('ping-good');
+                    } else if(pingMs < 160) {
+                        $pingHud.addClass('ping-warn');
+                    } else {
+                        $pingHud.addClass('ping-bad');
+                    }
+                }
+                return;
+            }
+
             if(subAction === 'gold_update') {
                 $('#hub-gold-amount').text(payload.gold);
                 if(payload.reward && this.game && this.game.player) {
                     this.game.infoManager.addDamageInfo("+" + payload.reward + " Or", this.game.player.x, this.game.player.y - 28, "exp", 2500);
+                }
+                return;
+            }
+
+            if(subAction === 'house_rest_heal') {
+                if(payload.amount && this.game && this.game.player && this.game.infoManager) {
+                    this.game.infoManager.addDamageInfo("🏠 +" + payload.amount + " PV", this.game.player.x, this.game.player.y - 20, "healed", 1800);
+                }
+                return;
+            }
+
+            if(subAction === 'quest_update') {
+                this.activeNpcQuest = payload.activeQuest || null;
+                this.renderNpcQuestUI(this.activeNpcQuest);
+                if(payload.message) {
+                    this.showHubNotice(payload.message, false);
+                    this.showMessage(payload.message);
+                }
+                if(payload.completedTitle && this.game && this.game.audioManager) {
+                    this.game.audioManager.playSound("achievement");
                 }
                 return;
             }
@@ -1913,12 +2194,82 @@ define(['jquery', 'storage'], function($, Storage) {
             }
         },
 
+        renderNpcQuestUI: function(activeQuest) {
+            $('.hub-npc-quest-btn').removeClass('active-quest');
+            if(activeQuest && activeQuest.id) {
+                $('.hub-npc-quest-btn[data-quest="' + activeQuest.id + '"]').addClass('active-quest');
+                $('#hub-active-quest-badge').text(
+                    'En cours : ' + activeQuest.title + ' (' + (activeQuest.progress || 0) + '/' + activeQuest.targetCount + ') · +' + activeQuest.rewardGold + ' Or'
+                );
+            } else {
+                $('#hub-active-quest-badge').text('Parlez à un PNJ ou choisissez un contrat :');
+            }
+        },
+
+        updateHubMapLiveStatus: function() {
+            if(!this.game || !this.game.player) return;
+            var gx = this.game.player.gridX,
+                gy = this.game.player.gridY;
+            if(typeof gx !== 'number' || typeof gy !== 'number') return;
+
+            var isInterior = false;
+            if(this.game.renderer && typeof this.game.renderer.isHouseInteriorPosition === 'function') {
+                isInterior = this.game.renderer.isHouseInteriorPosition(gx, gy);
+            } else {
+                isInterior = ((gx >= 115 && gy >= 60 && !(gx >= 145 && gx <= 168 && gy >= 270 && gy <= 292)) || gy >= 265);
+            }
+
+            $('#hub-map-live-coords').text('📍 Position : (' + gx + ', ' + gy + ')');
+            var $envBadge = $('#hub-map-live-env');
+            if(isInterior) {
+                $envBadge.removeClass('outdoor').addClass('indoor').text('🏠 Intérieur de Maison (Repos +PV actif)');
+                $('#hub-map-exit-house-btn').show();
+            } else {
+                $envBadge.removeClass('indoor').addClass('outdoor').text('🌲 Monde Extérieur');
+                $('#hub-map-exit-house-btn').hide();
+            }
+
+            var regions = [
+                { key: 'village', name: 'Village de Départ', x: 43, y: 210 },
+                { key: 'beach', name: 'Plage du Sud', x: 110, y: 280 },
+                { key: 'forest', name: 'Grande Forêt', x: 65, y: 160 },
+                { key: 'desert', name: 'Désert Aride', x: 145, y: 175 },
+                { key: 'lavacave', name: 'Caverne de Lave', x: 150, y: 80 },
+                { key: 'castle', name: 'Château Royal', x: 155, y: 275 },
+                { key: 'graveyard', name: 'Cimetière Maudit', x: 25, y: 45 },
+                { key: 'bossroom', name: 'Antre des Boss Mondiaux', x: 45, y: 105 }
+            ];
+
+            var closestRegion = regions[0],
+                bestDist = 999999;
+            if(!isInterior) {
+                _.each(regions, function(r) {
+                    var d = Math.abs(gx - r.x) + Math.abs(gy - r.y);
+                    if(d < bestDist) {
+                        bestDist = d;
+                        closestRegion = r;
+                    }
+                });
+                $('#hub-map-live-region').text('Zone : ' + closestRegion.name);
+                $('.hub-map-card').removeClass('current-region');
+                $('.hub-map-card[data-dest="' + closestRegion.key + '"]').addClass('current-region');
+            } else {
+                $('#hub-map-live-region').text('Zone : Pièce intérieure (Utilisez ▼ SORTIE ou le bouton ci-contre)');
+                $('.hub-map-card').removeClass('current-region');
+            }
+        },
+
         renderHubState: function(state) {
             var self = this;
             $('#hub-gold-amount').text(state.gold || 0);
             if(typeof state.lives === 'number') {
                 this.updateLivesUI(state.lives);
             }
+            if(typeof state.activeQuest !== 'undefined') {
+                this.activeNpcQuest = state.activeQuest;
+                this.renderNpcQuestUI(this.activeNpcQuest);
+            }
+            this.updateHubMapLiveStatus();
 
             var getRarityBadgeHtml = function(rarity, label) {
                 if(!label) return '';
