@@ -682,8 +682,8 @@
     				<canvas id="background"></canvas>
     				<canvas id="entities"></canvas>
     				<canvas id="foreground" class="clickable"></canvas>
+    				<div id="bubbles"></div>
     			</div>
-    			<div id="bubbles"></div>
                 <!-- HUD des 3 Vies (Style Arcade / Mario) et Ping temps réel en haut de l'écran -->
                 <div id="nova-lives-hud" title="Vos Vies (à 0 Vie : Game Over et retour au village)">
                     <span class="lives-label">VIES</span>
@@ -823,6 +823,28 @@
                         <div id="mutebutton" class="barbutton clickable active" title="Activer / Couper le son (Touche M)"></div>
                     </div>
     			</div>
+				<!-- Coin de Messages / Historique du Chat (visible même si AFK) -->
+				<div id="nova-chat-log-panel" class="clickable">
+				    <div class="chat-log-header">
+				        <div class="chat-log-title-bar">
+				            <span class="chat-log-title">💬 Messages</span>
+				            <span id="chat-log-unread-badge" class="chat-log-badge" style="display:none;">0</span>
+				        </div>
+				        <div class="chat-log-tabs">
+				            <button type="button" class="chat-log-tab active" data-filter="all">Tous</button>
+				            <button type="button" class="chat-log-tab" data-filter="global">Global</button>
+				            <button type="button" class="chat-log-tab" data-filter="guild">Guilde</button>
+				        </div>
+				        <button type="button" id="chat-log-toggle-btn" class="chat-log-toggle-btn" title="Réduire / Agrandir l'historique des messages">−</button>
+				    </div>
+				    <div id="nova-chat-log-messages" class="chat-log-body">
+				        <div class="chat-log-msg system" data-type="system">
+				            <span class="chat-log-time">--:--</span>
+				            <span class="chat-log-tag system">[Système]</span>
+				            <span class="chat-log-text">Bienvenue sur Nova Quest ! Les messages des joueurs sont conservés ici.</span>
+				        </div>
+				    </div>
+				</div>
 				<div id="chatbox">
 				    <form action="none" method="get" accept-charset="utf-8" onsubmit="return false;">
                         <button type="button" id="chat-mode-toggle" class="clickable" title="Basculer entre Chat Global et Chat de Guilde">[Global]</button>

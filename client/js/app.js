@@ -40,6 +40,7 @@ define(['jquery', 'storage'], function($, Storage) {
             this.initHubEvents();
             this.initGoogleAuth();
             this.initRememberMe();
+            this.initChatLog();
 
             if(localStorage && (localStorage.data || localStorage.getItem('nova_remember_username'))) {
                 this.frontPage = 'loadcharacter';
@@ -2264,6 +2265,9 @@ define(['jquery', 'storage'], function($, Storage) {
                 this.announceTimer = setTimeout(function() {
                     $banner.fadeOut(500);
                 }, 7000);
+                if(typeof this.addChatMessage === 'function') {
+                    this.addChatMessage(payload.author || "Annonce", payload.text, 'system');
+                }
                 return;
             }
 
@@ -2279,6 +2283,9 @@ define(['jquery', 'storage'], function($, Storage) {
                     if(this.game.audioManager) {
                         this.game.audioManager.playSound("chat");
                     }
+                }
+                if(typeof this.addChatMessage === 'function') {
+                    this.addChatMessage(payload.sender, payload.message, 'guild', payload.senderId, payload.tag);
                 }
                 return;
             }
@@ -2627,6 +2634,208 @@ define(['jquery', 'storage'], function($, Storage) {
                     $adminPlayers.append($row);
                 });
             }
+        },
+
+        // =========================================================================
+        // COIN DE MESSAGES / HISTORIQUE DU CHAT (VISIBLE MEME SI AFK)
+        // =========================================================================
+        initChatLog: function() {
+            var self = this;
+            this.chatLogMessages = [];
+            this.chatLogFilter = 'all';
+            this.chatLogUnread = 0;
+            this.isChatLogCollapsed = false;
+
+            // Sur mobile/tablette tactile, replier par défaut pour dégager le joystick
+            var isTouch = (typeof this.detectTouchDevice === 'function' && this.detectTouchDevice()) ||
+                          (typeof this.detectMobileApp === 'function' && this.detectMobileApp());
+            if(isTouch) {
+                this.isChatLogCollapsed = true;
+                $('#nova-chat-log-panel').addClass('collapsed');
+                $('#chat-log-toggle-btn').text('+');
+            }
+
+            // Basculer Réduire / Agrandir
+            $('#chat-log-toggle-btn').click(function(e) {
+                e.stopPropagation();
+                self.toggleChatLog();
+            });
+
+            $('.chat-log-title-bar').click(function(e) {
+                e.stopPropagation();
+                self.toggleChatLog();
+            });
+
+            // Filtres par onglets (Tous, Global, Guilde)
+            $('.chat-log-tab').click(function(e) {
+                e.stopPropagation();
+                var filter = $(this).attr('data-filter') || 'all';
+                self.setChatLogFilter(filter);
+            });
+
+            // Empêcher les clics dans le panneau d'historique de déclencher des déplacements du joueur
+            $('#nova-chat-log-panel').click(function(e) {
+                e.stopPropagation();
+                self.clearChatLogUnread();
+            });
+
+            $('#nova-chat-log-messages').bind('scroll', function() {
+                var el = this;
+                var isNearBottom = (el.scrollHeight - el.scrollTop - el.clientHeight) < 25;
+                if(isNearBottom) {
+                    self.clearChatLogUnread();
+                }
+            });
+        },
+
+        toggleChatLog: function(forceState) {
+            if(typeof forceState === 'boolean') {
+                this.isChatLogCollapsed = forceState;
+            } else {
+                this.isChatLogCollapsed = !this.isChatLogCollapsed;
+            }
+            if(this.isChatLogCollapsed) {
+                $('#nova-chat-log-panel').addClass('collapsed');
+                $('#chat-log-toggle-btn').text('+');
+            } else {
+                $('#nova-chat-log-panel').removeClass('collapsed');
+                $('#chat-log-toggle-btn').text('−');
+                this.clearChatLogUnread();
+                this.scrollChatLogToBottom();
+            }
+        },
+
+        setChatLogFilter: function(filter) {
+            this.chatLogFilter = filter;
+            $('.chat-log-tab').removeClass('active');
+            $('.chat-log-tab[data-filter="' + filter + '"]').addClass('active');
+
+            $('#nova-chat-log-messages .chat-log-msg').each(function() {
+                var msgType = $(this).attr('data-type');
+                if(filter === 'all') {
+                    $(this).removeClass('hidden-by-filter');
+                } else if(filter === 'global') {
+                    if(msgType === 'global' || msgType === 'npc' || msgType === 'system') {
+                        $(this).removeClass('hidden-by-filter');
+                    } else {
+                        $(this).addClass('hidden-by-filter');
+                    }
+                } else if(filter === 'guild') {
+                    if(msgType === 'guild' || msgType === 'system') {
+                        $(this).removeClass('hidden-by-filter');
+                    } else {
+                        $(this).addClass('hidden-by-filter');
+                    }
+                }
+            });
+
+            this.scrollChatLogToBottom();
+        },
+
+        addChatMessage: function(author, message, channel, authorId, guildTag) {
+            if(!message) return;
+            channel = channel || 'global'; // 'global', 'guild', 'npc', 'system'
+
+            var now = new Date();
+            var hours = String(now.getHours());
+            if(hours.length < 2) hours = '0' + hours;
+            var minutes = String(now.getMinutes());
+            if(minutes.length < 2) minutes = '0' + minutes;
+            var timeStr = hours + ':' + minutes;
+
+            var msgObj = {
+                id: 'cmsg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+                time: timeStr,
+                author: author || 'Inconnu',
+                message: message,
+                channel: channel,
+                authorId: authorId,
+                guildTag: guildTag || null
+            };
+
+            this.chatLogMessages.push(msgObj);
+            if(this.chatLogMessages.length > 80) {
+                this.chatLogMessages.shift();
+            }
+
+            this.appendChatLogMessage(msgObj);
+
+            if(this.isChatLogCollapsed) {
+                this.incrementChatLogUnread();
+            } else {
+                var $container = $('#nova-chat-log-messages');
+                var el = $container[0];
+                if(el) {
+                    var isNearBottom = (el.scrollHeight - el.scrollTop - el.clientHeight) < 40;
+                    if(isNearBottom) {
+                        this.scrollChatLogToBottom();
+                    } else {
+                        this.incrementChatLogUnread();
+                    }
+                }
+            }
+        },
+
+        appendChatLogMessage: function(m) {
+            var $container = $('#nova-chat-log-messages');
+            if($container.length === 0) return;
+
+            // Nettoyer message d'accueil si plusieurs messages sont arrivés
+            if(this.chatLogMessages.length > 1) {
+                $container.find('.chat-log-msg.system:contains("Bienvenue")').remove();
+            }
+
+            var $row = $('<div class="chat-log-msg ' + m.channel + '" data-type="' + m.channel + '"/>');
+            $row.append($('<span class="chat-log-time"/>').text(m.time));
+
+            var tagText = '[Global]';
+            if(m.channel === 'guild') {
+                tagText = m.guildTag ? ('[' + m.guildTag + ']') : '[Guilde]';
+            } else if(m.channel === 'npc') {
+                tagText = '[PNJ]';
+            } else if(m.channel === 'system') {
+                tagText = '[Système]';
+            }
+            $row.append($('<span class="chat-log-tag ' + m.channel + '"/>').text(tagText));
+
+            if(m.author && m.channel !== 'system') {
+                $row.append($('<span class="chat-log-author"/>').text(m.author));
+            }
+
+            $row.append($('<span class="chat-log-text"/>').text(m.message));
+
+            // Respecter le filtre actuel
+            if(this.chatLogFilter === 'global' && (m.channel !== 'global' && m.channel !== 'npc' && m.channel !== 'system')) {
+                $row.addClass('hidden-by-filter');
+            } else if(this.chatLogFilter === 'guild' && (m.channel !== 'guild' && m.channel !== 'system')) {
+                $row.addClass('hidden-by-filter');
+            }
+
+            $container.append($row);
+
+            // Limiter les nœuds DOM à 80
+            var $children = $container.children();
+            if($children.length > 80) {
+                $children.slice(0, $children.length - 80).remove();
+            }
+        },
+
+        scrollChatLogToBottom: function() {
+            var $container = $('#nova-chat-log-messages');
+            if($container.length && $container[0]) {
+                $container[0].scrollTop = $container[0].scrollHeight;
+            }
+        },
+
+        incrementChatLogUnread: function() {
+            this.chatLogUnread = (this.chatLogUnread || 0) + 1;
+            var $badge = $('#chat-log-unread-badge');
+            $badge.text(this.chatLogUnread > 99 ? '99+' : this.chatLogUnread).show();
+        },
+
+        clearChatLogUnread: function() {
+            this.chatLogUnread = 0;
+            $('#chat-log-unread-badge').text('0').hide();
         }
     });
 

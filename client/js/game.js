@@ -1711,13 +1711,18 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
                     }
                 });
 
-                self.client.onChatMessage(function(entityId, message) {
+                self.client.onChatMessage(function(entityId, message, senderName) {
                     var entity = self.getEntityById(entityId);
                     if(entity) {
                         self.createBubble(entityId, message);
                         self.assignBubbleTo(entity);
                     }
                     self.audioManager.playSound("chat");
+
+                    if(self.app && typeof self.app.addChatMessage === 'function') {
+                        var author = senderName || (entity && entity.name) || (self.player && self.player.id === entityId ? self.player.name : ("Joueur #" + entityId));
+                        self.app.addChatMessage(author, message, 'global', entityId);
+                    }
                 });
 
                 self.client.onPopulationChange(function(worldPlayers, totalPlayers) {
@@ -2117,6 +2122,11 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
                     this.createBubble(npc.id, msg);
                     this.assignBubbleTo(npc);
                     this.audioManager.playSound("npc");
+
+                    if(this.app && typeof this.app.addChatMessage === 'function') {
+                        var npcName = (npc && (npc.name || npc.kindName)) || "PNJ";
+                        this.app.addChatMessage(npcName, msg, 'npc', npc.id);
+                    }
                 } else {
                     this.destroyBubble(npc.id);
                     this.audioManager.playSound("npc-end");
@@ -3017,6 +3027,10 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
 
         createBubble: function(id, message) {
             this.bubbleManager.create(id, message, this.currentTime);
+            var entity = this.getEntityById(id);
+            if(entity) {
+                this.assignBubbleTo(entity);
+            }
         },
 
         destroyBubble: function(id) {
@@ -3026,33 +3040,31 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
         assignBubbleTo: function(character) {
             var bubble = this.bubbleManager.getBubbleById(character.id);
 
-            if(bubble) {
-                var s = this.renderer.scale,
-                    t = 16 * s, // tile size
-                    x = ((character.x - this.camera.x) * s),
-                    w = parseInt(bubble.element.css('width')) + 24,
-                    offset = (w / 2) - (t / 2),
-                    offsetY,
-                    y;
+            if(bubble && this.camera) {
+                var c = this.camera,
+                    worldSpanW = (c.gridW || 30) * 16,
+                    worldSpanH = (c.gridH || 14) * 16,
+                    relX = (character.x + 8) - c.x,
+                    headOffset = (typeof Npc !== 'undefined' && character instanceof Npc) ? 6 : 8;
 
-                if(character instanceof Npc) {
-                    offsetY = 0;
-                } else {
-                    if(s === 2) {
-                        if(this.renderer.mobile) {
-                            offsetY = 0;
-                        } else {
-                            offsetY = 15;
-                        }
-                    } else {
-                        offsetY = 12;
-                    }
+                if(character.customScale && character.customScale > 1) {
+                    headOffset = headOffset * character.customScale;
                 }
 
-                y = ((character.y - this.camera.y) * s) - (t * 2) - offsetY;
+                var relY = (character.y - headOffset) - c.y,
+                    pctX = (relX / worldSpanW) * 100,
+                    pctY = (relY / worldSpanH) * 100;
 
-                bubble.element.css('left', x - offset + 'px');
-                bubble.element.css('top', y + 'px');
+                if(pctX < -25 || pctX > 125 || pctY < -30 || pctY > 125) {
+                    bubble.element.css('display', 'none');
+                } else {
+                    bubble.element.css({
+                        display: 'inline-block',
+                        left: pctX.toFixed(2) + '%',
+                        top: pctY.toFixed(2) + '%',
+                        transform: 'translate(-50%, -100%)'
+                    });
+                }
             }
         },
 

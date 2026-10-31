@@ -274,9 +274,16 @@ define(['character', 'timer'], function(Character, Timer) {
         },
 
         updateChatBubbles: function() {
-            var t = this.game.currentTime;
+            var self = this,
+                t = this.game.currentTime;
 
             this.game.bubbleManager.update(t);
+            this.game.bubbleManager.forEachBubble(function(bubble) {
+                var entity = self.game.getEntityById(bubble.id);
+                if(entity) {
+                    self.game.assignBubbleTo(entity);
+                }
+            });
         },
 
         updateInfos: function() {
