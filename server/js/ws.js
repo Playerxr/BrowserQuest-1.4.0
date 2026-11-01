@@ -9,6 +9,7 @@ var http = require('http');
 var path = require('path');
 var crypto = require('crypto');
 var express = require('express');
+var compression = require('compression');
 var WebSocketServer = require('ws').WebSocketServer;
 var net = require('net');
 var Format = require('./format');
@@ -133,6 +134,8 @@ WS.MultiVersionWebsocketServer = Server.extend({
         }
         this._trustProxy = app.get('trust proxy fn');
 
+        app.use(compression());
+
         app.use(function (req, res, next) {
             res.setHeader('Access-Control-Allow-Origin', '*');
             res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -183,8 +186,11 @@ WS.MultiVersionWebsocketServer = Server.extend({
 
         if (useOnePort === true) {
             var staticOptions = {
-                setHeaders: function (res) {
+                setHeaders: function (res, filePath) {
                     res.setHeader('Access-Control-Allow-Origin', '*');
+                    if (/\.(json|js|png|css|mp3|ogg|wav)$/i.test(filePath)) {
+                        res.setHeader('Cache-Control', 'public, max-age=86400');
+                    }
                 }
             };
             // Fichiers statiques du client

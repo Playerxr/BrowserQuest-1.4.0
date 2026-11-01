@@ -12,6 +12,7 @@
         "@capacitor/core": "^6.0.0",
         "@capacitor/haptics": "^6.0.0",
         "better-sqlite3": "^13.0.3",
+        "compression": "^1.8.2",
         "concurrently": "^10.0.6",
         "express": "^4.19.0",
         "localtunnel": "^2.0.2",

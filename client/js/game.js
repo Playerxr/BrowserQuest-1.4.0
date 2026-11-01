@@ -128,9 +128,15 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
         loadMap: function() {
             var self = this;
 
+            if(this.map && (this.map.isLoaded || this.map.isLoading)) {
+                return;
+            }
+
             this.map = new Map(!this.renderer.upscaledRendering, this);
+            this.map.isLoading = true;
 
             this.map.ready(function() {
+                if(self.map) self.map.isLoading = false;
                 log.info("Map loaded.");
                 var tilesetIndex = self.renderer.upscaledRendering ? 0 : self.renderer.scale - 1;
                 self.renderer.setTileset(self.map.tilesets[tilesetIndex]);

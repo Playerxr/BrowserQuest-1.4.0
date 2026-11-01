@@ -49,7 +49,7 @@ define(['jquery', 'area'], function($, Area) {
                 if(completed) return;
                 try {
                     self._initMap(data);
-                    if(fromWorker) {
+                    if(fromWorker && data.grid && data.plateauGrid) {
                         self.grid = data.grid;
                         self.plateauGrid = data.plateauGrid;
                     } else {
@@ -65,31 +65,95 @@ define(['jquery', 'area'], function($, Area) {
                     fail(error);
                 }
             }
+
+            // 1. Instantanéité absolue : si window.mapData est présent (préchargé via maps/world_client.js), charger sans réseau !
+            if(typeof window !== 'undefined' && window.mapData && window.mapData.width && window.mapData.collisions) {
+                finish(window.mapData, false);
+                return;
+            }
+
             function fetchMap(err) {
                 if(completed || fetching) return;
-                console.warn("Worker map fallback to fetchMap, reason:", err);
                 fetching = true;
                 stopWorker();
+
+                // 2. Si fetch natif est disponible, l'utiliser en premier
+                if(typeof window !== 'undefined' && typeof window.fetch === 'function') {
+                    var controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+                    var fetchTimer = setTimeout(function() {
+                        if(controller) controller.abort();
+                    }, 15000);
+
+                    window.fetch(filepath, {
+                        signal: controller ? controller.signal : undefined,
+                        cache: 'default'
+                    }).then(function(res) {
+                        clearTimeout(fetchTimer);
+                        if(!res.ok) throw new Error('HTTP ' + res.status);
+                        return res.json();
+                    }).then(function(data) {
+                        finish(data, false);
+                    }).catch(function(e) {
+                        clearTimeout(fetchTimer);
+                        fallbackScriptOrAjax();
+                    });
+                    return;
+                }
+
+                fallbackScriptOrAjax();
+            }
+
+            function fallbackScriptOrAjax() {
+                if(completed) return;
+
+                // Tenter d'injecter maps/world_client.js si non présent
+                if(typeof document !== 'undefined') {
+                    var script = document.createElement('script');
+                    script.src = 'maps/world_client.js';
+                    script.onload = function() {
+                        if(window.mapData && window.mapData.width) {
+                            finish(window.mapData, false);
+                        } else {
+                            doAjax();
+                        }
+                    };
+                    script.onerror = function() {
+                        doAjax();
+                    };
+                    document.head.appendChild(script);
+                } else {
+                    doAjax();
+                }
+            }
+
+            function doAjax() {
+                if(completed) return;
                 $.ajax({
                     url: filepath,
                     dataType: 'json',
-                    timeout: 30000,
+                    timeout: 20000,
+                    cache: true,
                     success: function(data) { finish(data, false); },
                     error: function(xhr, status, e) {
                         console.error("AJAX map load error:", status, e, xhr ? xhr.status : null);
-                        fail(e || status);
+                        if(typeof window !== 'undefined' && window.mapData && window.mapData.width) {
+                            finish(window.mapData, false);
+                        } else {
+                            fail(e || status);
+                        }
                     }
                 });
             }
+
             if(useWorker && typeof Worker !== 'undefined') {
                 try {
                     worker = new Worker('js/mapworker.js');
                     worker.onmessage = function(event) { finish(event.data, true); };
-                    worker.onerror = worker.onmessageerror = fetchMap;
-                    workerTimer = setTimeout(fetchMap, 10000);
+                    worker.onerror = worker.onmessageerror = function(e) { fetchMap(e); };
+                    workerTimer = setTimeout(function() { fetchMap('worker_timeout'); }, 2500);
                     worker.postMessage(1);
                 } catch(error) {
-                    fetchMap();
+                    fetchMap(error);
                 }
             } else {
                 fetchMap();
