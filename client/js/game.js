@@ -69,6 +69,7 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
             // combat
             this.infoManager = new InfoManager(this);
             this.projectiles = [];
+            this.levelUpEffects = [];
 
             // zoning
             this.currentZoning = null;
@@ -1548,11 +1549,16 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
 
                 self.client.onPlayerKillMob(function(kind, level, exp) {
                     var mobExp = Types.getMobExp(kind);
+                    var previousLevel = (self.player && typeof self.player.level === 'number' && self.player.level > 0) ? self.player.level : level;
                     self.player.level = level;
                     self.player.experience = exp;
                     self.updateExpBar();
                     
                     self.infoManager.addDamageInfo("+"+mobExp+" exp", self.player.x, self.player.y - 15, "exp", 3000);
+
+                    if(level > previousLevel) {
+                        self.triggerLevelUp(level);
+                    }
 
                     var expInThisLevel = self.player.experience - Types.expForLevel[self.player.level-1];
                     var expForLevelUp = Types.expForLevel[self.player.level] - Types.expForLevel[self.player.level-1];
@@ -3118,6 +3124,75 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
         },
         onPlayerExpChange: function(callback){
             this.playerexp_callback = callback;
+        },
+
+        onPlayerLevelUp: function(callback) {
+            this.playerlevelup_callback = callback;
+        },
+
+        triggerLevelUp: function(newLevel) {
+            var lvl = (typeof newLevel === 'number' && newLevel > 0) ? newLevel : ((this.player && this.player.level) || 2);
+            if(this.player) {
+                this.player.level = lvl;
+            }
+
+            if(this.audioManager) {
+                if(typeof this.audioManager.playLevelUpSound === 'function') {
+                    this.audioManager.playLevelUpSound();
+                } else {
+                    this.audioManager.playSound("levelup");
+                }
+            }
+
+            if(this.player && this.infoManager) {
+                this.infoManager.addDamageInfo("Level Up!", this.player.x, this.player.y - 28, "exp", 3000);
+            }
+
+            // Ajouter un effet visuel sur le canevas (aura dorée, anneaux d'onde et étincelles montantes autour du héros)
+            if(this.player) {
+                if(!this.levelUpEffects) this.levelUpEffects = [];
+                var particles = [];
+                for(var i = 0; i < 16; i++) {
+                    var angle = (Math.PI * 2 * i) / 16;
+                    particles.push({
+                        angle: angle,
+                        radius: 6 + (i % 3) * 5,
+                        speedY: 18 + (i % 4) * 6,
+                        size: (i % 2 === 0) ? 2.5 : 1.8
+                    });
+                }
+                this.levelUpEffects.push({
+                    startTime: this.currentTime || Date.now(),
+                    duration: 2200,
+                    entity: this.player,
+                    x: this.player.x,
+                    y: this.player.y,
+                    level: lvl,
+                    particles: particles
+                });
+            }
+
+            if(this.app && typeof this.app.showLevelUpAnimation === 'function') {
+                this.app.showLevelUpAnimation(lvl);
+            } else if(typeof $ !== 'undefined') {
+                $('#levelup-level-num').text(lvl);
+                var $ov = $('#levelup-overlay');
+                $ov.removeClass('active');
+                if($ov[0]) void $ov[0].offsetWidth;
+                $ov.addClass('active');
+                clearTimeout(this._levelUpOverlayTimer);
+                this._levelUpOverlayTimer = setTimeout(function() {
+                    $ov.removeClass('active');
+                }, 3200);
+            }
+
+            if(this.app && typeof this.app.addChatMessage === 'function') {
+                this.app.addChatMessage("Système", "🎉 Level Up! Vous avez atteint le Niveau " + lvl + " !", "system");
+            }
+
+            if(this.playerlevelup_callback) {
+                this.playerlevelup_callback(lvl);
+            }
         },
 
         onPlayerHealthChange: function(callback) {

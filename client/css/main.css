@@ -3837,5 +3837,156 @@ body.nova-mobile-app #nova-chat-log-panel.collapsed {
     }
 }
 
+/* ==========================================================================
+   ANIMATION CENTRALE LEVEL UP! AU MILIEU DE LA VUE DE JEU
+   ========================================================================== */
 
+#levelup-overlay {
+    position: absolute;
+    top: 42%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 60;
+    text-align: center;
+    user-select: none;
+    -webkit-user-select: none;
+}
 
+#levelup-overlay.active {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    animation: levelupBannerPop 3.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.levelup-banner {
+    position: relative;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 16px 32px;
+    border-radius: 12px;
+    background: radial-gradient(circle, rgba(24, 18, 8, 0.92) 0%, rgba(15, 23, 42, 0.85) 75%, rgba(15, 23, 42, 0) 100%);
+    border: 2px solid #facc15;
+    box-shadow: 0 0 28px rgba(250, 204, 21, 0.75), inset 0 0 18px rgba(250, 204, 21, 0.35);
+}
+
+.levelup-rays {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 240px;
+    height: 240px;
+    margin-top: -120px;
+    margin-left: -120px;
+    border-radius: 50%;
+    background: repeating-conic-gradient(
+        from 0deg,
+        rgba(250, 204, 21, 0.22) 0deg 15deg,
+        transparent 15deg 30deg
+    );
+    mask-image: radial-gradient(circle, rgba(0,0,0,1) 15%, rgba(0,0,0,0) 70%);
+    -webkit-mask-image: radial-gradient(circle, rgba(0,0,0,1) 15%, rgba(0,0,0,0) 70%);
+    z-index: -1;
+    animation: levelupRaysRotate 6s linear infinite;
+}
+
+.levelup-sparkles {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 4px;
+    font-size: 16px;
+    color: #fef08a;
+    text-shadow: 0 0 8px #eab308, 1px 1px 0 #000;
+}
+
+.levelup-sparkles .sparkle {
+    display: inline-block;
+    animation: levelupSparkleBounce 0.75s ease-in-out infinite alternate;
+}
+
+.levelup-sparkles .sparkle.s2 { animation-delay: 0.15s; color: #facc15; font-size: 19px; }
+.levelup-sparkles .sparkle.s3 { animation-delay: 0.3s; }
+.levelup-sparkles .sparkle.s4 { animation-delay: 0.45s; color: #facc15; font-size: 19px; }
+
+.levelup-title {
+    font-family: 'GraphicPixel', 'AdvoCut', sans-serif;
+    font-size: 34px;
+    line-height: 1.1;
+    font-weight: bold;
+    letter-spacing: 2px;
+    color: #fef08a;
+    text-transform: uppercase;
+    text-shadow:
+        0 0 14px rgba(250, 204, 21, 0.95),
+        0 2px 0 #ca8a04,
+        0 4px 0 #854d0e,
+        2px 2px 0 #000,
+        -2px -2px 0 #000,
+        2px -2px 0 #000,
+        -2px 2px 0 #000;
+    margin-bottom: 6px;
+}
+
+.levelup-subtitle {
+    font-family: 'GraphicPixel', 'AdvoCut', sans-serif;
+    font-size: 14px;
+    color: #ffffff;
+    background: rgba(202, 138, 4, 0.35);
+    border: 1px solid rgba(254, 240, 138, 0.6);
+    border-radius: 999px;
+    padding: 3px 14px;
+    text-shadow: 1px 1px 0 #000;
+}
+
+.levelup-subtitle #levelup-level-num {
+    color: #fde047;
+    font-weight: bold;
+}
+
+@keyframes levelupBannerPop {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -35%) scale(0.45);
+    }
+    14% {
+        opacity: 1;
+        transform: translate(-50%, -52%) scale(1.12);
+    }
+    24% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.0);
+    }
+    78% {
+        opacity: 1;
+        transform: translate(-50%, -54%) scale(1.02);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -68%) scale(0.92);
+    }
+}
+
+@keyframes levelupRaysRotate {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes levelupSparkleBounce {
+    0% { transform: translateY(0) scale(0.9); opacity: 0.75; }
+    100% { transform: translateY(-5px) scale(1.2); opacity: 1; }
+}
+
+@media screen and (max-width: 800px) {
+    .levelup-banner {
+        padding: 10px 20px;
+    }
+    .levelup-title {
+        font-size: 24px;
+    }
+    .levelup-subtitle {
+        font-size: 11px;
+    }
+}

@@ -12,7 +12,7 @@ define(['area'], function(Area) {
             this.currentMusic = null;
             this.areas = [];
             this.musicNames = ["village", "beach", "forest", "cave", "desert", "lavaland", "boss"];
-            this.soundNames = ["loot", "hit1", "hit2", "hurt", "heal", "chat", "revive", "death", "firefox", "achievement", "kill1", "kill2", "noloot", "teleport", "chest", "npc", "npc-end"];
+            this.soundNames = ["loot", "hit1", "hit2", "hurt", "heal", "chat", "revive", "death", "firefox", "achievement", "levelup", "kill1", "kill2", "noloot", "teleport", "chest", "npc", "npc-end"];
 
             var loadSoundFiles = function() {
                 var counter = _.size(self.soundNames);
@@ -120,10 +120,59 @@ define(['area'], function(Area) {
         },
 
         playSound: function(name) {
-            var sound = this.enabled && this.getSound(name);
-            if(sound) {
-                sound.play();
+            if(!this.enabled) return;
+            if(name === "levelup") {
+                this._playWebAudioLevelUpFanfare();
             }
+            var sound = this.getSound(name) || (name === "levelup" ? this.getSound("achievement") : null);
+            if(sound) {
+                try {
+                    var playPromise = sound.play();
+                    if(playPromise && typeof playPromise.catch === 'function') {
+                        playPromise.catch(function() {});
+                    }
+                } catch(e) {}
+            }
+        },
+
+        playLevelUpSound: function() {
+            this.playSound("levelup");
+        },
+
+        _playWebAudioLevelUpFanfare: function() {
+            if(!this.enabled || typeof window === 'undefined') return;
+            try {
+                var AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if(!AudioCtx) return;
+                if(!this._webAudioCtx) {
+                    this._webAudioCtx = new AudioCtx();
+                }
+                var ctx = this._webAudioCtx;
+                if(ctx.state === 'suspended' && typeof ctx.resume === 'function') {
+                    ctx.resume();
+                }
+                var now = ctx.currentTime;
+                // Arpège héroïque RPG (Do5 -> Mi5 -> Sol5 -> Do6)
+                var notes = [
+                    { freq: 523.25, delay: 0.00, dur: 0.14 },
+                    { freq: 659.25, delay: 0.11, dur: 0.14 },
+                    { freq: 783.99, delay: 0.22, dur: 0.16 },
+                    { freq: 1046.50, delay: 0.34, dur: 0.45 }
+                ];
+                _.each(notes, function(n) {
+                    var osc = ctx.createOscillator();
+                    var gain = ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(n.freq, now + n.delay);
+                    gain.gain.setValueAtTime(0.001, now + n.delay);
+                    gain.gain.exponentialRampToValueAtTime(0.22, now + n.delay + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + n.delay + n.dur);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(now + n.delay);
+                    osc.stop(now + n.delay + n.dur + 0.02);
+                });
+            } catch(e) {}
         },
 
         addArea: function(x, y, width, height, musicName) {

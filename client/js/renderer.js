@@ -758,6 +758,77 @@ function(Camera, Item, Character, Player, Timer) {
             }
         },
 
+        drawLevelUpEffects: function() {
+            var effects = (this.game && this.game.levelUpEffects) ? this.game.levelUpEffects : [];
+            if(!effects || effects.length === 0) return;
+
+            var now = this.game.currentTime || Date.now(),
+                s = this.scale,
+                ctx = this.context;
+
+            for(var i = effects.length - 1; i >= 0; i--) {
+                var eff = effects[i],
+                    elapsed = now - eff.startTime,
+                    prog = elapsed / (eff.duration || 2200);
+
+                if(prog >= 1 || prog < 0) {
+                    effects.splice(i, 1);
+                    continue;
+                }
+
+                var ex = (eff.entity ? eff.entity.x : eff.x) + 8,
+                    ey = (eff.entity ? eff.entity.y : eff.y) + 8,
+                    cx = ex * s,
+                    cy = ey * s,
+                    alpha = prog < 0.2 ? (prog / 0.2) : (1 - (prog - 0.2) / 0.8);
+
+                ctx.save();
+
+                // Colonne de lumière dorée ascendante
+                var pillarW = 22 * s * (1 - prog * 0.35),
+                    pillarH = 56 * s;
+                var grad = ctx.createLinearGradient(cx, cy + 6 * s, cx, cy - pillarH);
+                grad.addColorStop(0, "rgba(250, 204, 21, " + (0.45 * alpha).toFixed(3) + ")");
+                grad.addColorStop(0.6, "rgba(254, 240, 138, " + (0.25 * alpha).toFixed(3) + ")");
+                grad.addColorStop(1, "rgba(254, 240, 138, 0)");
+                ctx.fillStyle = grad;
+                ctx.fillRect(cx - pillarW / 2, cy - pillarH, pillarW, pillarH + 6 * s);
+
+                // Double onde de choc circulaire dorée au sol
+                var ring1R = (8 + prog * 36) * s;
+                ctx.beginPath();
+                ctx.arc(cx, cy + 4 * s, ring1R, 0, Math.PI * 2, false);
+                ctx.strokeStyle = "rgba(250, 204, 21, " + (0.9 * alpha).toFixed(3) + ")";
+                ctx.lineWidth = 2.5 * s;
+                ctx.stroke();
+
+                if(prog > 0.12) {
+                    var ring2R = (6 + (prog - 0.12) * 32) * s;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy + 4 * s, ring2R, 0, Math.PI * 2, false);
+                    ctx.strokeStyle = "rgba(254, 240, 138, " + (0.75 * alpha).toFixed(3) + ")";
+                    ctx.lineWidth = 1.5 * s;
+                    ctx.stroke();
+                }
+
+                // Particules d'étincelles dorées montantes en spirale
+                var pts = eff.particles || [];
+                for(var j = 0; j < pts.length; j++) {
+                    var pt = pts[j],
+                        ang = pt.angle + prog * 3.2,
+                        px = cx + Math.cos(ang) * (pt.radius + prog * 14) * s,
+                        py = (cy + 4 * s) - (prog * pt.speedY * 1.8) * s;
+                    ctx.beginPath();
+                    ctx.arc(px, py, pt.size * s, 0, Math.PI * 2, false);
+                    ctx.fillStyle = (j % 2 === 0) ? "#fef08a" : "#facc15";
+                    ctx.globalAlpha = Math.max(0.05, alpha);
+                    ctx.fill();
+                }
+
+                ctx.restore();
+            }
+        },
+
         drawCombatInfo: function() {
             var self = this;
 
@@ -943,6 +1014,7 @@ function(Camera, Item, Character, Player, Timer) {
                 this.drawIndoorDoorIndicators();
                 this.drawEntities();
                 this.drawProjectiles();
+                this.drawLevelUpEffects();
                 this.drawCombatInfo();
                 this.drawHighTiles(this.context);
             this.context.restore();
@@ -967,6 +1039,7 @@ function(Camera, Item, Character, Player, Timer) {
                 this.drawIndoorDoorIndicators();
                 this.drawDirtyEntities();
                 this.drawProjectiles();
+                this.drawLevelUpEffects();
             this.context.restore();
 
             this.drawDoorTransitionFade();

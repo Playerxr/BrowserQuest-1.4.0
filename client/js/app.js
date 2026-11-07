@@ -2836,6 +2836,21 @@ define(['jquery', 'storage'], function($, Storage) {
         clearChatLogUnread: function() {
             this.chatLogUnread = 0;
             $('#chat-log-unread-badge').text('0').hide();
+        },
+
+        showLevelUpAnimation: function(newLevel) {
+            var lvl = (typeof newLevel === 'number' && newLevel > 0) ? newLevel : 2;
+            $('#levelup-level-num').text(lvl);
+            var $overlay = $('#levelup-overlay');
+            $overlay.removeClass('active');
+            if($overlay[0]) {
+                void $overlay[0].offsetWidth;
+            }
+            $overlay.addClass('active');
+            clearTimeout(this._levelUpTimer);
+            this._levelUpTimer = setTimeout(function() {
+                $overlay.removeClass('active');
+            }, 3200);
         }
     });
 

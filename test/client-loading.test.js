@@ -770,4 +770,43 @@ test('WorldServer.isPlayerInHouseInterior and Player NPC hunting quests track ki
     assert.equal(mockPlayer.experience, 50); // +50 XP
 });
 
+test('leveling up triggers Level Up! central banner animation, canvas aura effects, and sound effect', () => {
+    const timer = clock();
+    const Game = load('game.js', timer);
+    const game = Object.create(Game.prototype);
 
+    let soundPlayed = null;
+    let damageInfoAdded = null;
+    let bannerLevelShown = null;
+    let chatLogged = null;
+
+    game.player = { id: 1, name: 'NovaHero', x: 640, y: 320, level: 1, experience: 0 };
+    game.currentTime = 1000;
+    game.levelUpEffects = [];
+    game.audioManager = {
+        playLevelUpSound() { soundPlayed = 'levelup'; },
+        playSound(name) { soundPlayed = name; }
+    };
+    game.infoManager = {
+        addDamageInfo(text, x, y, type, duration) {
+            damageInfoAdded = { text, x, y, type, duration };
+        }
+    };
+    game.app = {
+        showLevelUpAnimation(lvl) { bannerLevelShown = lvl; },
+        addChatMessage(author, msg, channel) { chatLogged = { author, msg, channel }; }
+    };
+
+    game.triggerLevelUp(2);
+
+    assert.equal(game.player.level, 2);
+    assert.equal(soundPlayed, 'levelup');
+    assert.ok(damageInfoAdded);
+    assert.equal(damageInfoAdded.text, 'Level Up!');
+    assert.equal(bannerLevelShown, 2);
+    assert.ok(chatLogged);
+    assert.match(chatLogged.msg, /Level Up!/);
+    assert.equal(game.levelUpEffects.length, 1);
+    assert.equal(game.levelUpEffects[0].level, 2);
+    assert.equal(game.levelUpEffects[0].particles.length, 16);
+});
