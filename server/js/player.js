@@ -309,7 +309,7 @@ module.exports = Player = Character.extend({
 
                             // Annonce publique dans le chat et bannière pour tout loot Légendaire !
                             if(rarity === "legendary") {
-                                var legText = "✨ " + self.name + " a trouvé " + itemLabel + " [Légendaire] !";
+                                var legText = "[LÉGENDAIRE] " + self.name + " a trouvé " + itemLabel + " [Légendaire] !";
                                 self.server.pushBroadcast(new Messages.Chat(self, legText));
                                 self.server.pushBroadcast(new Messages.Hub("announcement", {
                                     author: "BUTIN LÉGENDAIRE",
@@ -571,8 +571,8 @@ module.exports = Player = Character.extend({
                 }).serialize());
                 self.sendHubState(
                     isGameOver
-                        ? "💀 GAME OVER ! Vous avez perdu votre dernière Vie : retour au village de départ (3 ❤️ Vies restaurées) !"
-                        : ("💔 Vous avez perdu 1 Vie ! Il vous reste " + self.lives + " ❤️ Vie(s). Réapparition au point de contrôle."),
+                        ? "[GAME OVER] Vous avez perdu votre dernière Vie : retour au village de départ (3 Vies restaurées) !"
+                        : ("Vous avez perdu 1 Vie ! Il vous reste " + self.lives + " Vie(s). Réapparition au point de contrôle."),
                     isGameOver
                 );
                 return;
@@ -952,9 +952,9 @@ module.exports = Player = Character.extend({
             { kind: "axe", name: "Hache de Guerre", type: "weapon", price: 420 },
             { kind: "morningstar", name: "Étoile du Matin", type: "weapon", price: 950 },
             { kind: "bluesword", name: "Épée Saphir", type: "weapon", price: 2200 },
-            { kind: "bow", name: "🏹 Arc de Chasseur (Attaque à Distance)", type: "weapon", price: 750 },
+            { kind: "bow", name: "Arc de Chasseur (Attaque à Distance)", type: "weapon", price: 750 },
             { kind: "redsword", name: "Épée Rubis", type: "weapon", price: 4800 },
-            { kind: "goldenbow", name: "🏹 Arc Royal d'Élite [Légendaire]", type: "weapon", price: 9200 },
+            { kind: "goldenbow", name: "Arc Royal d'Élite [Légendaire]", type: "weapon", price: 9200 },
             { kind: "goldensword", name: "Épée d'Or Légendaire", type: "weapon", price: 9500 },
             { kind: "leatherarmor", name: "Armure de Cuir", type: "armor", price: 150 },
             { kind: "mailarmor", name: "Cotte de Mailles", type: "armor", price: 380 },
@@ -1112,7 +1112,7 @@ module.exports = Player = Character.extend({
         return [
             {
                 id: "rats_village",
-                title: "🐀 Cave du Village : Chasse aux Rats",
+                title: "Cave du Village : Chasse aux Rats",
                 giverNpc: "villagegirl",
                 giverLabel: "Villageoise / Maisons du Village",
                 targetMobs: ["rat"],
@@ -1124,7 +1124,7 @@ module.exports = Player = Character.extend({
             },
             {
                 id: "crabs_beach",
-                title: "🦀 Plage du Sud : Pinces de Crabes",
+                title: "Plage du Sud : Pinces de Crabes",
                 giverNpc: "beachnpc",
                 giverLabel: "Marin de la Plage",
                 targetMobs: ["crab"],
@@ -1136,7 +1136,7 @@ module.exports = Player = Character.extend({
             },
             {
                 id: "goblins_forest",
-                title: "👺 Grande Forêt : Éclaireurs Gobelins",
+                title: "Grande Forêt : Éclaireurs Gobelins",
                 giverNpc: "forestnpc",
                 giverLabel: "Garde Forestier",
                 targetMobs: ["goblin"],
@@ -1148,7 +1148,7 @@ module.exports = Player = Character.extend({
             },
             {
                 id: "skeletons_crypt",
-                title: "💀 Cimetière Maudit : Garde d'Ossements",
+                title: "Cimetière Maudit : Garde d'Ossements",
                 giverNpc: "priest",
                 giverLabel: "Prêtre / Sanctuaire",
                 targetMobs: ["skeleton", "skeleton2"],
@@ -1169,7 +1169,7 @@ module.exports = Player = Character.extend({
         if(this.activeQuest && this.activeQuest.id === questDef.id && !this.activeQuest.completed) {
             this.send(new Messages.Hub("quest_update", {
                 activeQuest: this.activeQuest,
-                message: "📜 Quête en cours : " + this.activeQuest.title + " (" + this.activeQuest.progress + "/" + this.activeQuest.targetCount + ")"
+                message: "Quête en cours : " + this.activeQuest.title + " (" + this.activeQuest.progress + "/" + this.activeQuest.targetCount + ")"
             }).serialize());
             return this.activeQuest;
         }
@@ -1188,7 +1188,7 @@ module.exports = Player = Character.extend({
         };
         this.send(new Messages.Hub("quest_update", {
             activeQuest: this.activeQuest,
-            message: "📜 Nouvelle Quête acceptée : " + questDef.title + " (Récompense : +" + questDef.rewardGold + " Or, +" + questDef.rewardExp + " XP)"
+            message: "Nouvelle Quête acceptée : " + questDef.title + " (Récompense : +" + questDef.rewardGold + " Or, +" + questDef.rewardExp + " XP)"
         }).serialize());
         return this.activeQuest;
     },
@@ -1219,13 +1219,13 @@ module.exports = Player = Character.extend({
                 completedTitle: doneTitle,
                 rewardGold: rGold,
                 rewardExp: rExp,
-                message: "🎉 Quête accomplie : " + doneTitle + " ! Vous recevez +" + rGold + " Or et +" + rExp + " XP !"
+                message: "Quête accomplie : " + doneTitle + " ! Vous recevez +" + rGold + " Or et +" + rExp + " XP !"
             }).serialize());
             return true;
         } else {
             this.send(new Messages.Hub("quest_update", {
                 activeQuest: this.activeQuest,
-                message: "⚔️ Progression Quête : " + this.activeQuest.title + " (" + this.activeQuest.progress + "/" + this.activeQuest.targetCount + ")"
+                message: "Progression Quête : " + this.activeQuest.title + " (" + this.activeQuest.progress + "/" + this.activeQuest.targetCount + ")"
             }).serialize());
             return true;
         }
@@ -1577,7 +1577,7 @@ module.exports = Player = Character.extend({
             if(unlockedGuild) {
                 _.each(unlockedGuild.members, function(mName) {
                     var mp = self.server.getPlayerByName(mName);
-                    if(mp) mp.sendHubState("🏰 Le Salon Privé de la guilde [" + unlockedGuild.tag + "] est débloqué ! Vous pouvez vous y téléporter !", false);
+                    if(mp) mp.sendHubState("Le Salon Privé de la guilde [" + unlockedGuild.tag + "] est débloqué ! Vous pouvez vous y téléporter !", false);
                 });
             }
             return;
@@ -1599,7 +1599,7 @@ module.exports = Player = Character.extend({
             this.send(new Messages.Teleport(this).serialize());
             this.broadcast(new Messages.Teleport(this), false);
             this.server.pushRelevantEntityListTo(this);
-            this.sendHubState("✨ Bienvenue dans le Salon Privé de [" + gTp.tag + "] " + gTp.name + " !", false);
+            this.sendHubState("Bienvenue dans le Salon Privé de [" + gTp.tag + "] " + gTp.name + " !", false);
             return;
         }
 
@@ -1649,7 +1649,7 @@ module.exports = Player = Character.extend({
             _.each(gBoss.members, function(mName) {
                 var mp = self.server.getPlayerByName(mName);
                 if(mp) {
-                    mp.sendHubState("👹 " + bossNameFr + " a été invoqué dans le Salon de Guilde ! Tous les participants recevront Or et Équipement dans leur Sac !", false);
+                    mp.sendHubState("[Boss de Guilde] " + bossNameFr + " a été invoqué dans le Salon de Guilde ! Tous les participants recevront Or et Équipement dans leur Sac !", false);
                 }
             });
             return;
@@ -1679,7 +1679,7 @@ module.exports = Player = Character.extend({
             _.each(gChest.members, function(mName) {
                 var mp = self.server.getPlayerByName(mName);
                 if(mp) {
-                    mp.sendHubState("🎁 Le Chef " + self.name + " a posé un Coffre au Trésor de Guilde en (" + spawnedChest.x + ", " + spawnedChest.y + ") ! Cliquez dessus pour l'ouvrir !", false);
+                    mp.sendHubState("[Coffre de Guilde] Le Chef " + self.name + " a posé un Coffre au Trésor de Guilde en (" + spawnedChest.x + ", " + spawnedChest.y + ") ! Cliquez dessus pour l'ouvrir !", false);
                 }
             });
             return;
@@ -1856,7 +1856,7 @@ module.exports = Player = Character.extend({
             } else {
                 this.send(new Messages.Hub("quest_update", {
                     activeQuest: this.activeQuest,
-                    message: "📜 Quête active : " + this.activeQuest.title + " (" + this.activeQuest.progress + "/" + this.activeQuest.targetCount + ")"
+                    message: "Quête active : " + this.activeQuest.title + " (" + this.activeQuest.progress + "/" + this.activeQuest.targetCount + ")"
                 }).serialize());
             }
             return;
@@ -1866,7 +1866,7 @@ module.exports = Player = Character.extend({
             var reqQuestId = Utils.sanitize(String(data.questId || "")).trim();
             var started = this.startOrSwitchNpcQuest(reqQuestId);
             if(started) {
-                this.sendHubState("📜 Quête sélectionnée : " + started.title, false);
+                this.sendHubState("Quête sélectionnée : " + started.title, false);
             }
             return;
         }
@@ -1889,7 +1889,7 @@ module.exports = Player = Character.extend({
                 this.send(new Messages.Teleport(this).serialize());
                 this.broadcast(new Messages.Teleport(this), false);
                 this.server.pushRelevantEntityListTo(this);
-                this.sendHubNotice("🚪 Vous êtes sorti de la maison vers (" + exitPos.x + ", " + exitPos.y + ").", false);
+                this.sendHubNotice("Vous êtes sorti de la maison vers (" + exitPos.x + ", " + exitPos.y + ").", false);
                 return;
             }
             var destinations = {
@@ -1920,7 +1920,7 @@ module.exports = Player = Character.extend({
             this.send(new Messages.Teleport(this).serialize());
             this.broadcast(new Messages.Teleport(this), false);
             this.server.pushRelevantEntityListTo(this);
-            this.sendHubNotice("🗺️ Téléportation vers : " + dest.name + " (" + dest.x + ", " + dest.y + ") !", false);
+            this.sendHubNotice("Téléportation vers : " + dest.name + " (" + dest.x + ", " + dest.y + ") !", false);
             return;
         }
 
@@ -2042,7 +2042,7 @@ module.exports = Player = Character.extend({
             var adminChestItems = ["goldensword", "goldenarmor", "redsword", "redarmor", "bluesword", "platearmor", "firepotion", "burger"];
             var admChest = this.server.spawnCustomChest(this.x, this.y, adminChestItems, this.instanceId || null);
             if(admChest) {
-                this.sendHubNotice("🎁 Coffre Légendaire posé en (" + admChest.x + ", " + admChest.y + ") !", false);
+                this.sendHubNotice("[Coffre Légendaire] Posé en (" + admChest.x + ", " + admChest.y + ") !", false);
             }
             return;
         }

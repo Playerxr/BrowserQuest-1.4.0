@@ -984,16 +984,16 @@ define(['jquery', 'storage'], function($, Storage) {
                 eye: "Œil maléfique",
                 snake: "Serpent",
                 skeleton2: "Grand Squelette",
-                boss: "👑 Roi Squelette (Boss)",
-                grandogre: "👑 Grand Ogre (Boss)",
-                spectreancien: "👑 Spectre Ancien (Boss)",
-                seigneurmort: "👑 Seigneur de la Mort (Boss)",
-                archimage: "👑 Archimage Noir (Boss)",
-                oeilabyssal: "👑 Œil Abyssal (Boss)",
-                reinecrabe: "👑 Reine Crabe Géante (Boss)",
-                roigobelin: "👑 Roi Gobelin (Boss)",
-                hydreserpent: "👑 Hydre Venimeuse (Boss)",
-                colossesquelette: "👑 Colosse d'Os (Boss)",
+                boss: "[Boss] Roi Squelette",
+                grandogre: "[Boss] Grand Ogre",
+                spectreancien: "[Boss] Spectre Ancien",
+                seigneurmort: "[Boss] Seigneur de la Mort",
+                archimage: "[Boss] Archimage Noir",
+                oeilabyssal: "[Boss] Œil Abyssal",
+                reinecrabe: "[Boss] Reine Crabe Géante",
+                roigobelin: "[Boss] Roi Gobelin",
+                hydreserpent: "[Boss] Hydre Venimeuse",
+                colossesquelette: "[Boss] Colosse d'Os",
                 deathknight: "Chevalier de la Mort",
                 guard: "Garde",
                 king: "Le Roi",
@@ -1829,34 +1829,34 @@ define(['jquery', 'storage'], function($, Storage) {
 
             // Initialiser la grille de Spawner Admin en 1 clic (Coffre Légendaire + Monstres + 10 Boss)
             var monsters = [
-                { kind: "chest", label: "🎁 Coffre Légendaire", isChest: true },
-                { kind: "rat", label: "🐀 Rat" },
-                { kind: "crab", label: "🦀 Crabe" },
-                { kind: "bat", label: "🦇 Chauve-souris" },
-                { kind: "goblin", label: "👺 Gobelin" },
-                { kind: "skeleton", label: "💀 Squelette" },
-                { kind: "snake", label: "🐍 Serpent" },
-                { kind: "ogre", label: "👹 Ogre" },
-                { kind: "skeleton2", label: "⚔️ Gd Squelette" },
-                { kind: "eye", label: "👁️ Œil Maléfique" },
-                { kind: "spectre", label: "👻 Spectre" },
-                { kind: "wizard", label: "🧙 Sorcier Noir" },
-                { kind: "deathknight", label: "🗡️ Chev. Mort" },
-                { kind: "reinecrabe", label: "👑 Reine Crabe" },
-                { kind: "roigobelin", label: "👑 Roi Gobelin" },
-                { kind: "hydreserpent", label: "👑 Hydre" },
-                { kind: "grandogre", label: "👑 Grand Ogre" },
-                { kind: "colossesquelette", label: "👑 Colosse d'Os" },
-                { kind: "oeilabyssal", label: "👑 Œil Abyssal" },
-                { kind: "spectreancien", label: "👑 Spectre Ancien" },
-                { kind: "archimage", label: "👑 Archimage" },
-                { kind: "seigneurmort", label: "👑 Seign. Mort" },
-                { kind: "boss", label: "👑 Roi Squelette" }
+                { kind: "chest", icon: "chest", label: "Coffre Légendaire", isChest: true },
+                { kind: "rat", icon: "target", label: "Rat" },
+                { kind: "crab", icon: "target", label: "Crabe" },
+                { kind: "bat", icon: "target", label: "Chauve-souris" },
+                { kind: "goblin", icon: "sword", label: "Gobelin" },
+                { kind: "skeleton", icon: "skull", label: "Squelette" },
+                { kind: "snake", icon: "target", label: "Serpent" },
+                { kind: "ogre", icon: "skull", label: "Ogre" },
+                { kind: "skeleton2", icon: "sword", label: "Gd Squelette" },
+                { kind: "eye", icon: "eye", label: "Œil Maléfique" },
+                { kind: "spectre", icon: "skull", label: "Spectre" },
+                { kind: "wizard", icon: "bolt", label: "Sorcier Noir" },
+                { kind: "deathknight", icon: "sword", label: "Chev. Mort" },
+                { kind: "reinecrabe", icon: "crown", label: "Reine Crabe" },
+                { kind: "roigobelin", icon: "crown", label: "Roi Gobelin" },
+                { kind: "hydreserpent", icon: "crown", label: "Hydre" },
+                { kind: "grandogre", icon: "crown", label: "Grand Ogre" },
+                { kind: "colossesquelette", icon: "crown", label: "Colosse d'Os" },
+                { kind: "oeilabyssal", icon: "crown", label: "Œil Abyssal" },
+                { kind: "spectreancien", icon: "crown", label: "Spectre Ancien" },
+                { kind: "archimage", icon: "crown", label: "Archimage" },
+                { kind: "seigneurmort", icon: "crown", label: "Seign. Mort" },
+                { kind: "boss", icon: "crown", label: "Roi Squelette" }
             ];
             var $grid = $('#hub-admin-spawner-grid').empty();
             _.each(monsters, function(m) {
                 var $btn = $('<button type="button" class="hub-spawn-btn"/>')
-                    .text(m.label)
+                    .html(self.getIconSvg(m.icon, 'sm') + '<span>' + m.label + '</span>')
                     .click(function(e) {
                         e.stopPropagation();
                         if(self.game && self.game.client) {
@@ -2166,14 +2166,36 @@ define(['jquery', 'storage'], function($, Storage) {
             }, 4000);
         },
 
+        getIconSvg: function(name, extraClass) {
+            var cls = 'nova-svg-icon' + (extraClass ? (' ' + extraClass) : '');
+            var icons = {
+                'heart': '<svg class="' + cls + '" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>',
+                'heart-broken': '<svg class="' + cls + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/><polyline points="12 5 10 10 14 13 11 18"/></svg>',
+                'sword': '<svg class="' + cls + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14.5 17.5L3 6V3h3l11.5 11.5"/><path d="M13 19l6-6"/><path d="M16 16l4 4"/><path d="M19 21l2-2"/></svg>',
+                'shield': '<svg class="' + cls + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+                'potion': '<svg class="' + cls + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10 2v6L5 18a2 2 0 0 0 1.8 3h10.4a2 2 0 0 0 1.8-3L14 8V2"/><line x1="8.5" y1="2" x2="15.5" y2="2"/><path d="M6.5 15h11"/></svg>',
+                'coin': '<svg class="' + cls + '" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="#facc15" stroke="#854d0e" stroke-width="2"/><path d="M12 7v10M9.5 9.5h5M9.5 14.5h5" stroke="#854d0e" stroke-width="2" stroke-linecap="round"/></svg>',
+                'crown': '<svg class="' + cls + '" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="2 19 22 19 20 7 15 12 12 5 9 12 4 7"/></svg>',
+                'chest': '<svg class="' + cls + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M3 12h18M12 10v4"/></svg>',
+                'skull': '<svg class="' + cls + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="10" r="6"/><path d="M9 16v4h6v-4"/><circle cx="10" cy="10" r="1" fill="currentColor"/><circle cx="14" cy="10" r="1" fill="currentColor"/></svg>',
+                'pin': '<svg class="' + cls + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
+                'home': '<svg class="' + cls + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 10l9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V10z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
+                'tree': '<svg class="' + cls + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="12 2 5 12 9 12 6 19 18 19 15 12 19 12"/><line x1="12" y1="19" x2="12" y2="22"/></svg>',
+                'eye': '<svg class="' + cls + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
+                'bolt': '<svg class="' + cls + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+                'target': '<svg class="' + cls + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg>'
+            };
+            return icons[name] || '';
+        },
+
         updateLivesUI: function(livesCount) {
             var count = (typeof livesCount === 'number') ? Math.max(0, Math.min(3, livesCount)) : 3;
             var html = '';
             for(var i = 0; i < 3; i++) {
                 if(i < count) {
-                    html += '<span class="life-heart active">❤️</span>';
+                    html += '<span class="life-heart active">' + this.getIconSvg('heart') + '</span>';
                 } else {
-                    html += '<span class="life-heart lost">🖤</span>';
+                    html += '<span class="life-heart lost">' + this.getIconSvg('heart-broken') + '</span>';
                 }
             }
             $('#nova-lives-icons').html(html);
@@ -2230,7 +2252,7 @@ define(['jquery', 'storage'], function($, Storage) {
 
             if(subAction === 'house_rest_heal') {
                 if(payload.amount && this.game && this.game.player && this.game.infoManager) {
-                    this.game.infoManager.addDamageInfo("🏠 +" + payload.amount + " PV", this.game.player.x, this.game.player.y - 20, "healed", 1800);
+                    this.game.infoManager.addDamageInfo("[Repos] +" + payload.amount + " PV", this.game.player.x, this.game.player.y - 20, "healed", 1800);
                 }
                 return;
             }
@@ -2325,13 +2347,13 @@ define(['jquery', 'storage'], function($, Storage) {
                 isInterior = ((gx >= 115 && gy >= 60 && !(gx >= 145 && gx <= 168 && gy >= 270 && gy <= 292)) || gy >= 265);
             }
 
-            $('#hub-map-live-coords').text('📍 Position : (' + gx + ', ' + gy + ')');
+            $('#hub-map-live-coords').html(this.getIconSvg('pin', 'sm') + ' Position : (' + gx + ', ' + gy + ')');
             var $envBadge = $('#hub-map-live-env');
             if(isInterior) {
-                $envBadge.removeClass('outdoor').addClass('indoor').text('🏠 Intérieur de Maison (Repos +PV actif)');
+                $envBadge.removeClass('outdoor').addClass('indoor').html(this.getIconSvg('home', 'sm') + ' Intérieur de Maison (Repos +PV actif)');
                 $('#hub-map-exit-house-btn').show();
             } else {
-                $envBadge.removeClass('indoor').addClass('outdoor').text('🌲 Monde Extérieur');
+                $envBadge.removeClass('indoor').addClass('outdoor').html(this.getIconSvg('tree', 'sm') + ' Monde Extérieur');
                 $('#hub-map-exit-house-btn').hide();
             }
 
@@ -2360,7 +2382,7 @@ define(['jquery', 'storage'], function($, Storage) {
                 $('.hub-map-card').removeClass('current-region');
                 $('.hub-map-card[data-dest="' + closestRegion.key + '"]').addClass('current-region');
             } else {
-                $('#hub-map-live-region').text('Zone : Pièce intérieure (Utilisez ▼ SORTIE ou le bouton ci-contre)');
+                $('#hub-map-live-region').text('Zone : Pièce intérieure (Utilisez SORTIE ou le bouton ci-contre)');
                 $('.hub-map-card').removeClass('current-region');
             }
         },
@@ -2403,14 +2425,14 @@ define(['jquery', 'storage'], function($, Storage) {
             var $wRow = $('<div class="hub-item-row"/>');
             var $wInfo = $('<div class="hub-item-info"/>');
             $wInfo.append($('<div class="hub-sprite-icon"/>').css('background-image', 'url("img/2/item-' + wKind + '.png")'));
-            $wInfo.append($('<div/>').html('<strong>🗡️ ' + wName + '</strong>' + getRarityBadgeHtml(state.weaponRarity, state.weaponRarityLabel) + '<br><span style="color:#5a4631;">Arme équipée</span>'));
+            $wInfo.append($('<div/>').html('<strong>' + self.getIconSvg('sword', 'sm') + ' ' + wName + '</strong>' + getRarityBadgeHtml(state.weaponRarity, state.weaponRarityLabel) + '<br><span style="color:#5a4631;">Arme équipée</span>'));
             $wRow.append($wInfo);
             $eqList.append($wRow);
 
             var $aRow = $('<div class="hub-item-row"/>');
             var $aInfo = $('<div class="hub-item-info"/>');
             $aInfo.append($('<div class="hub-sprite-icon"/>').css('background-image', 'url("img/2/item-' + aKind + '.png")'));
-            $aInfo.append($('<div/>').html('<strong>🛡️ ' + aName + '</strong>' + getRarityBadgeHtml(state.armorRarity, state.armorRarityLabel) + '<br><span style="color:#5a4631;">Armure équipée</span>'));
+            $aInfo.append($('<div/>').html('<strong>' + self.getIconSvg('shield', 'sm') + ' ' + aName + '</strong>' + getRarityBadgeHtml(state.armorRarity, state.armorRarityLabel) + '<br><span style="color:#5a4631;">Armure équipée</span>'));
             $aRow.append($aInfo);
             $eqList.append($aRow);
 
@@ -2425,9 +2447,11 @@ define(['jquery', 'storage'], function($, Storage) {
                     $info.append($icon).append($text);
 
                     var $btns = $('<div style="display:flex;gap:4px;"/>');
-                    var actLabel = slotObj.isHealing ? '🧪 Boire' : '⚔️ Équiper';
+                    var actHtml = slotObj.isHealing
+                        ? (self.getIconSvg('potion', 'sm') + 'Boire')
+                        : (self.getIconSvg('sword', 'sm') + 'Équiper');
                     var $eqBtn = $('<button type="button" class="hub-action-btn gold"/>')
-                        .text(actLabel)
+                        .html(actHtml)
                         .click(function(e) {
                             e.stopPropagation();
                             self.game.client.sendHub('bag_equip', { slot: slotObj.slot });
@@ -2454,7 +2478,7 @@ define(['jquery', 'storage'], function($, Storage) {
                 var $row = $('<div class="hub-item-row"/>');
                 var $info = $('<div class="hub-item-info"/>');
                 var $icon = $('<div class="hub-sprite-icon"/>').css('background-image', 'url("img/2/item-' + item.kind + '.png")');
-                var $text = $('<div/>').html('<strong>' + item.name + '</strong>' + getRarityBadgeHtml(item.rarity, item.rarityLabel) + '<br><span style="color:#854d0e;">💰 ' + item.price + ' Or</span>');
+                var $text = $('<div/>').html('<strong>' + item.name + '</strong>' + getRarityBadgeHtml(item.rarity, item.rarityLabel) + '<br><span style="color:#854d0e;">' + self.getIconSvg('coin', 'xs') + ' ' + item.price + ' Or</span>');
                 $info.append($icon).append($text);
 
                 var $buyBtn = $('<button type="button" class="hub-action-btn gold"/>')
@@ -2479,7 +2503,7 @@ define(['jquery', 'storage'], function($, Storage) {
                     var $info = $('<div class="hub-item-info"/>');
                     var $icon = $('<div class="hub-sprite-icon"/>').css('background-image', 'url("img/2/item-' + m.item_kind + '.png")');
                     var itemName = self.getItemDisplayName(m.item_kind);
-                    var $text = $('<div/>').html('<strong>' + itemName + '</strong>' + getRarityBadgeHtml(m.rarity, m.rarityLabel) + '<br><span>Vendeur: <b>' + m.seller + '</b> &bull; 💰 ' + m.price + ' Or</span>');
+                    var $text = $('<div/>').html('<strong>' + itemName + '</strong>' + getRarityBadgeHtml(m.rarity, m.rarityLabel) + '<br><span>Vendeur: <b>' + m.seller + '</b> &bull; ' + self.getIconSvg('coin', 'xs') + ' ' + m.price + ' Or</span>');
                     $info.append($icon).append($text);
 
                     var isMine = (m.seller === myName);
@@ -2540,7 +2564,7 @@ define(['jquery', 'storage'], function($, Storage) {
                     qLevel = g.quest_level || 1,
                     qReward = 15000 * qLevel,
                     qPct = Math.min(100, Math.round((qKills / qTarget) * 100));
-                $('#hub-guild-quest-label').text('⚔️ Quête Collective Niv. ' + qLevel + ' : ' + qKills + ' / ' + qTarget + ' monstres (+' + qReward + ' Or Banque)');
+                $('#hub-guild-quest-label').html(self.getIconSvg('sword', 'sm') + ' Quête Collective Niv. ' + qLevel + ' : ' + qKills + ' / ' + qTarget + ' monstres (+' + qReward + ' Or Banque)');
                 $('#hub-guild-quest-bar').css('width', qPct + '%');
 
                 // Bouton Poser un Coffre de Guilde (1 000 Or) réservé au Chef de Guilde
@@ -2580,9 +2604,11 @@ define(['jquery', 'storage'], function($, Storage) {
                 var $memList = $('#hub-guild-members-list').empty();
                 _.each(g.members || [], function(m) {
                     var $row = $('<div class="hub-item-row"/>');
-                    var statusDot = m.online ? '🟢' : '⚪';
-                    var roleBadge = m.isLeader ? ' 👑' : '';
-                    $row.append('<div>' + statusDot + ' <strong>' + m.name + '</strong>' + roleBadge + '</div>');
+                    var statusDot = m.online
+                        ? '<span class="status-dot-icon online" title="En ligne"></span>'
+                        : '<span class="status-dot-icon offline" title="Hors ligne"></span>';
+                    var roleBadge = m.isLeader ? (' ' + self.getIconSvg('crown', 'sm')) : '';
+                    $row.append('<div>' + statusDot + '<strong>' + m.name + '</strong>' + roleBadge + '</div>');
 
                     if(iAmLeader && m.name !== myPlayerName) {
                         var $kickBtn = $('<button type="button" class="hub-action-btn danger">Exclure</button>').click(function(e) {
@@ -2613,7 +2639,7 @@ define(['jquery', 'storage'], function($, Storage) {
                 var $adminPlayers = $('#hub-admin-players-list').empty();
                 _.each(state.onlinePlayers || [], function(p) {
                     var $row = $('<div class="hub-admin-player-row"/>');
-                    $row.append('<div><strong>' + p.name + '</strong> <small>(Pos: ' + p.x + ',' + p.y + ' | PV: ' + p.hp + '/' + p.maxHp + ' | 💰 ' + p.gold + ' Or)</small></div>');
+                    $row.append('<div><strong>' + p.name + '</strong> <small>(Pos: ' + p.x + ',' + p.y + ' | PV: ' + p.hp + '/' + p.maxHp + ' | ' + self.getIconSvg('coin', 'xs') + ' ' + p.gold + ' Or)</small></div>');
 
                     var $btns = $('<div class="hub-admin-btns"/>');
                     var addAct = function(label, cls, actionName) {
@@ -2851,6 +2877,44 @@ define(['jquery', 'storage'], function($, Storage) {
             this._levelUpTimer = setTimeout(function() {
                 $overlay.removeClass('active');
             }, 3200);
+        },
+
+        showRegionBanner: function(name, desc) {
+            var $banner = $('#nova-region-banner');
+            $('#nova-region-name').text(name || 'Nova Quest');
+            $('#nova-region-desc').text(desc || '');
+            $banner.removeClass('active');
+            if($banner[0]) {
+                void $banner[0].offsetWidth;
+            }
+            $banner.addClass('active');
+            clearTimeout(this._regionBannerTimer);
+            this._regionBannerTimer = setTimeout(function() {
+                $banner.removeClass('active');
+            }, 3800);
+        },
+
+        showReconnectBanner: function(msg, attempt, maxAttempts) {
+            var $b = $('#nova-reconnect-banner');
+            $b.removeClass('restored').addClass('active');
+            var text = msg || 'Connexion interrompue — Reconnexion automatique...';
+            if(typeof attempt === 'number' && typeof maxAttempts === 'number') {
+                text += ' (' + attempt + '/' + maxAttempts + ')';
+            }
+            $('#nova-reconnect-text').text(text);
+        },
+
+        hideReconnectBanner: function(successMsg) {
+            var $b = $('#nova-reconnect-banner');
+            if(successMsg) {
+                $b.addClass('restored');
+                $('#nova-reconnect-text').text(successMsg);
+                setTimeout(function() {
+                    $b.removeClass('active restored');
+                }, 2200);
+            } else {
+                $b.removeClass('active restored');
+            }
         }
     });
 

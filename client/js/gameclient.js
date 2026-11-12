@@ -199,6 +199,7 @@ define(['player', 'entityfactory', 'lib/bison'], function(Player, EntityFactory,
                         self.receiveMessage(e.data);
                     } catch(error) {
                         if(alreadyWelcomed) {
+                            self._stopAutoReconnect = true;
                             self.connection.close();
                         } else {
                             self.hasLoggedWelcome = false;
@@ -209,7 +210,9 @@ define(['player', 'entityfactory', 'lib/bison'], function(Player, EntityFactory,
 
                 this.connection.onerror = function(e) {
                     log.error(e, true);
-                    failConnection('Impossible de joindre le serveur. Vérifiez la connexion puis réessayez.');
+                    if(!self.hasLoggedWelcome) {
+                        failConnection('Impossible de joindre le serveur. Vérifiez la connexion puis réessayez.');
+                    }
                 };
 
                 this.connection.onclose = function() {
@@ -218,17 +221,68 @@ define(['player', 'entityfactory', 'lib/bison'], function(Player, EntityFactory,
                         failConnection("Impossible de joindre le serveur ou données refusées.");
                         return;
                     }
-                    $('#container').addClass('error');
 
-                    if(self.disconnected_callback) {
-                        if(self.isTimeout) {
-                            self.disconnected_callback("Vous avez été déconnecté pour inactivité prolongée");
-                        } else {
-                            self.disconnected_callback("La connexion à Nova Quest a été perdue");
+                    // Si déconnecté pour inactivité ou si reconnexion désactivée
+                    if(self.isTimeout || self._stopAutoReconnect) {
+                        $('#container').addClass('error');
+                        if(self.disconnected_callback) {
+                            if(self.isTimeout) {
+                                self.disconnected_callback("Vous avez été déconnecté pour inactivité prolongée");
+                            } else {
+                                self.disconnected_callback("La connexion à Nova Quest a été perdue");
+                            }
                         }
+                        return;
                     }
+
+                    // Reconnexion automatique transparente anti-coupure
+                    self.attemptAutoReconnect();
                 };
             }
+        },
+
+        onReconnecting: function(callback) {
+            this.reconnecting_callback = callback;
+        },
+
+        onReconnected: function(callback) {
+            this.reconnected_callback = callback;
+        },
+
+        attemptAutoReconnect: function() {
+            var self = this;
+            if(this._reconnectTimer) clearTimeout(this._reconnectTimer);
+            if(typeof this._reconnectAttempts !== 'number') {
+                this._reconnectAttempts = 0;
+            }
+            this._maxReconnectAttempts = 15;
+            this._isReconnecting = true;
+
+            if(this._reconnectAttempts >= this._maxReconnectAttempts) {
+                this._isReconnecting = false;
+                $('#container').addClass('error');
+                if(this.disconnected_callback) {
+                    this.disconnected_callback("Impossible de rétablir la connexion avec Nova Quest après plusieurs tentatives.");
+                }
+                return;
+            }
+
+            this._reconnectAttempts += 1;
+            var delay = Math.min(6000, 1000 + (this._reconnectAttempts - 1) * 700);
+
+            if(this.reconnecting_callback) {
+                this.reconnecting_callback(this._reconnectAttempts, this._maxReconnectAttempts);
+            }
+
+            this._reconnectTimer = setTimeout(function() {
+                log.info("Tentative de reconnexion auto #" + self._reconnectAttempts + "...");
+                try {
+                    self.connect(false);
+                } catch(err) {
+                    log.error("Échec reconnexion socket: " + err);
+                    self.attemptAutoReconnect();
+                }
+            }, delay);
         },
 
         sendMessage: function(json) {
@@ -288,6 +342,14 @@ define(['player', 'entityfactory', 'lib/bison'], function(Player, EntityFactory,
         receiveWelcome: function(data) {
             this.hasLoggedWelcome = true;
             clearTimeout(this.connectionTimer);
+            if(this._isReconnecting) {
+                this._isReconnecting = false;
+                this._reconnectAttempts = 0;
+                if(this._reconnectTimer) clearTimeout(this._reconnectTimer);
+                if(this.reconnected_callback) {
+                    this.reconnected_callback();
+                }
+            }
             var id = data[1],
                 name = data[2],
                 x = data[3],
@@ -598,6 +660,14 @@ define(['player', 'entityfactory', 'lib/bison'], function(Player, EntityFactory,
 
         onDisconnected: function(callback) {
             this.disconnected_callback = callback;
+        },
+
+        onReconnecting: function(callback) {
+            this.reconnecting_callback = callback;
+        },
+
+        onReconnected: function(callback) {
+            this.reconnected_callback = callback;
         },
 
         onWelcome: function(callback) {

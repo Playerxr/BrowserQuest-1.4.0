@@ -247,6 +247,12 @@ define(['jquery', 'app', 'entrypoint'], function($, App, EntryPoint) {
                 app.initEquipmentIcons();
                 var entry = new EntryPoint();
 				entry.execute(game);
+
+                $('#nova-reconnect-btn').off('click').on('click', function() {
+                    if(game && game.client && typeof game.client.attemptAutoReconnect === 'function') {
+                        game.client.attemptAutoReconnect();
+                    }
+                });
             });
 
             game.onDisconnect(function(message) {

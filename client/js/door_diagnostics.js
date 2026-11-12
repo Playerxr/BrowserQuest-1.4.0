@@ -725,16 +725,16 @@
 
         var posText = p ? ('(' + p.gridX + ', ' + p.gridY + ') [px: ' + p.x + ',' + p.y + ']') : 'N/A';
         var envBadge = d.environment === 'INTERIOR'
-            ? '<span style="color:#fbbf24;font-weight:700;">🏠 INTÉRIEUR (Maison)</span>'
-            : '<span style="color:#4ade80;font-weight:700;">🌲 EXTÉRIEUR (Monde)</span>';
+            ? '<span style="color:#fbbf24;font-weight:700;"><svg class="nova-svg-icon xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 10l9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V10z"/></svg> INTÉRIEUR (Maison)</span>'
+            : '<span style="color:#4ade80;font-weight:700;"><svg class="nova-svg-icon xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="12 2 5 12 9 12 6 19 18 19 15 12 19 12"/></svg> EXTÉRIEUR (Monde)</span>';
         var camText = c ? ('(' + c.gridX + ', ' + c.gridY + ') [' + c.gridW + 'x' + c.gridH + '] rel=(' + c.relX + ',' + c.relY + ')') : 'N/A';
 
         var nearText = 'Aucune porte proche';
         if (d.nearestDoor) {
             nearText = 'Porte (' + d.nearestDoor.x + ', ' + d.nearestDoor.y + ') dist=' + d.nearestDoor.distance +
-                ' ➔ Dest (' + d.nearestDoor.destX + ', ' + d.nearestDoor.destY + ')';
+                ' &rarr; Dest (' + d.nearestDoor.destX + ', ' + d.nearestDoor.destY + ')';
             if (d.isOnDoor) {
-                nearText = '🚪 <strong style="color:#38bdf8;">SUR SEUIL DE PORTE</strong> ' + nearText;
+                nearText = '<strong style="color:#38bdf8;">[SUR SEUIL DE PORTE]</strong> ' + nearText;
             }
         }
 
@@ -743,10 +743,10 @@
             var statusColor = lastTr.status === 'OK' || lastTr.status === 'SERVER_CONFIRMED' ? '#4ade80' : '#f87171';
             var guardsStr = lastTr.guardsApplied.length > 0 ? lastTr.guardsApplied.join(', ') : 'Standard';
             trHtml = '<div style="font-size:11px;line-height:1.4;">' +
-                '<div><strong>#' + lastTr.id + '</strong> : (' + lastTr.from.x + ',' + lastTr.from.y + ') [' + lastTr.from.environment + '] ➔ ' +
+                '<div><strong>#' + lastTr.id + '</strong> : (' + lastTr.from.x + ',' + lastTr.from.y + ') [' + lastTr.from.environment + '] &rarr; ' +
                 '(' + lastTr.to.x + ',' + lastTr.to.y + ') [' + lastTr.to.environment + '] ' +
                 '<span style="color:' + statusColor + ';font-weight:700;">[' + lastTr.status + ']</span></div>' +
-                '<div style="color:#cbd5e1;">Caméra: (' + lastTr.from.cameraX + ',' + lastTr.from.cameraY + ') ➔ (' + lastTr.to.cameraX + ',' + lastTr.to.cameraY + ') | Protections: ' + guardsStr + '</div>' +
+                '<div style="color:#cbd5e1;">Caméra: (' + lastTr.from.cameraX + ',' + lastTr.from.cameraY + ') &rarr; (' + lastTr.to.cameraX + ',' + lastTr.to.cameraY + ') | Protections: ' + guardsStr + '</div>' +
                 '</div>';
         }
 
@@ -763,8 +763,8 @@
             var detailText = '';
             if (ev.details) {
                 if (ev.details.description) detailText = ev.details.description;
-                else if (ev.details.from && ev.details.to) detailText = ev.details.from + ' ➔ ' + ev.details.to;
-                else if (ev.details.destX !== undefined) detailText = '➔ (' + ev.details.destX + ',' + ev.details.destY + ')';
+                else if (ev.details.from && ev.details.to) detailText = ev.details.from + ' &rarr; ' + ev.details.to;
+                else if (ev.details.destX !== undefined) detailText = '&rarr; (' + ev.details.destX + ',' + ev.details.destY + ')';
                 else if (ev.details.distance !== undefined) detailText = 'Porte (' + ev.details.doorX + ',' + ev.details.doorY + ') à ' + ev.details.distance + ' case(s)';
             }
 

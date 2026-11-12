@@ -17,6 +17,7 @@ define(['character', 'timer'], function(Character, Timer) {
             this.updateChatBubbles();
             this.updateInfos();
             this.updateKeyboardMovement();
+            this.updateRegionToast();
         },
 
         updateCharacters: function() {
@@ -290,6 +291,74 @@ define(['character', 'timer'], function(Character, Timer) {
             var t = this.game.currentTime;
 
             this.game.infoManager.update(t);
+        },
+
+        updateRegionToast: function() {
+            var player = this.game.player;
+            if(!player || !this.game.started) return;
+
+            var t = this.game.currentTime;
+            if(this._lastRegionCheck && t - this._lastRegionCheck < 800) {
+                return;
+            }
+            this._lastRegionCheck = t;
+
+            var gx = player.gridX,
+                gy = player.gridY;
+
+            // Détection si le joueur est à l'intérieur d'une maison
+            var isInterior = (gx >= 0 && gx <= 28 && gy >= 0 && gy <= 28) ||
+                             (gx >= 10 && gx <= 28 && gy >= 30 && gy <= 50) ||
+                             (gx >= 130 && gx <= 170 && gy >= 190 && gy <= 245);
+
+            if(isInterior) {
+                if(this._currentRegionKey !== 'interior') {
+                    this._currentRegionKey = 'interior';
+                    if(this.game.app && typeof this.game.app.showRegionBanner === 'function') {
+                        this.game.app.showRegionBanner('Maison & Abri', 'Zone intérieure de repos — Régénération de PV active');
+                    }
+                }
+                return;
+            }
+
+            var regions = [
+                { key: 'village', name: 'Village de Départ', desc: 'Zone paisible & abri des aventuriers', x: 43, y: 210, radius: 45 },
+                { key: 'beach', name: 'Plage du Sud', desc: 'Rive sablonneuse bordée de crabes', x: 110, y: 280, radius: 40 },
+                { key: 'forest', name: 'Grande Forêt', desc: 'Sous-bois sauvages peuplés de gobelins', x: 65, y: 160, radius: 45 },
+                { key: 'desert', name: 'Désert Aride', desc: 'Dunes brûlantes et squelettes errants', x: 145, y: 175, radius: 40 },
+                { key: 'lavacave', name: 'Caverne de Lave', desc: 'Profondeurs volcaniques incandescentes', x: 150, y: 80, radius: 35 },
+                { key: 'castle', name: 'Château Royal', desc: 'Forteresse ancestrale et gardes d\'élite', x: 155, y: 275, radius: 30 },
+                { key: 'graveyard', name: 'Cimetière Maudit', desc: 'Terres maudites hantées par les spectres', x: 25, y: 45, radius: 40 },
+                { key: 'bossroom', name: 'Antre des Boss', desc: 'Zone de combat d\'Élite et de Raid mondial', x: 45, y: 105, radius: 30 }
+            ];
+
+            var closest = null,
+                minDist = 999999;
+
+            for(var i = 0; i < regions.length; i++) {
+                var r = regions[i];
+                var dist = Math.sqrt((gx - r.x) * (gx - r.x) + (gy - r.y) * (gy - r.y));
+                if(dist < minDist) {
+                    minDist = dist;
+                    closest = r;
+                }
+            }
+
+            if(closest && closest.key !== this._currentRegionKey) {
+                var isFirst = !this._currentRegionKey;
+                this._currentRegionKey = closest.key;
+                if(this.game.app && typeof this.game.app.showRegionBanner === 'function') {
+                    this.game.app.showRegionBanner(closest.name, closest.desc);
+                }
+                if(this.game.app && typeof this.game.app.addChatMessage === 'function') {
+                    this.game.app.addChatMessage({
+                        sender: 'Exploration',
+                        text: '[Région] Vous entrez dans : ' + closest.name + ' (' + closest.desc + ')',
+                        type: 'system',
+                        channel: 'all'
+                    });
+                }
+            }
         }
     });
 

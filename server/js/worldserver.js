@@ -744,7 +744,7 @@ module.exports = World = cls.Class.extend({
                             _.each(qRes.guild.members, function(mName) {
                                 var mp = self.getPlayerByName(mName);
                                 if(mp) {
-                                    mp.sendHubState("🏆 Quête de Guilde accomplie ! +" + qRes.rewardGold + " Or versés dans la Banque de Guilde !", false);
+                                    mp.sendHubState("[Quête de Guilde] Accomplie ! +" + qRes.rewardGold + " Or versés dans la Banque de Guilde !", false);
                                 }
                             });
                         }
@@ -775,9 +775,9 @@ module.exports = World = cls.Class.extend({
                             if(self.databaseHandler && self.databaseHandler.savePlayer) {
                                 self.databaseHandler.savePlayer(p);
                             }
-                            p.sendHubState("👹 Boss de Guilde vaincu ! Vous recevez +" + bonusGold + " Or et " + rewardName + " [" + rarityLabel + "] dans votre Sac !", false);
+                            p.sendHubState("[Boss de Guilde vaincu] Vous recevez +" + bonusGold + " Or et " + rewardName + " [" + rarityLabel + "] dans votre Sac !", false);
                             if(Types.getItemRarity(rewardKind) === "legendary") {
-                                self.pushBroadcast(new Messages.Chat(p, "✨ [LÉGENDAIRE] " + p.name + " a obtenu " + rewardName + " sur le Boss de Guilde !"));
+                                self.pushBroadcast(new Messages.Chat(p, "[LÉGENDAIRE] " + p.name + " a obtenu " + rewardName + " sur le Boss de Guilde !"));
                             }
                         }
                     });

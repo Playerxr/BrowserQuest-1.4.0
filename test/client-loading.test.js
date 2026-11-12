@@ -810,3 +810,63 @@ test('leveling up triggers Level Up! central banner animation, canvas aura effec
     assert.equal(game.levelUpEffects[0].level, 2);
     assert.equal(game.levelUpEffects[0].particles.length, 16);
 });
+
+test('moving across region boundaries triggers region banner notification and chat log', () => {
+    const timer = clock();
+    const Game = load('game.js', timer);
+    const game = Object.create(Game.prototype);
+
+    let bannerRegion = null;
+    let chatMessage = null;
+
+    game.map = { musicAreas: [{ id: 'village' }] };
+    game.player = { gridX: 20, gridY: 210 }; // Inside Village
+    game.app = {
+        showRegionBanner(name, desc) { bannerRegion = { name, desc }; },
+        addChatMessage(author, msg, ch) { chatMessage = { author, msg, ch }; }
+    };
+
+    game.updateRegionCheck();
+
+    assert.ok(bannerRegion);
+    assert.equal(bannerRegion.name, 'Village de Nova');
+    assert.equal(game._lastRegionId, 'village');
+    assert.ok(chatMessage);
+    assert.match(chatMessage.msg, /Village de Nova/);
+
+    // Moving into the Beach
+    bannerRegion = null;
+    game.player.gridX = 15;
+    game.player.gridY = 275;
+    game.updateRegionCheck();
+
+    assert.ok(bannerRegion);
+    assert.equal(bannerRegion.name, 'Plage du Sud');
+    assert.equal(game._lastRegionId, 'beach');
+});
+
+test('auto-reconnection transparently triggers reconnecting and reconnected UI callbacks', () => {
+    const timer = clock();
+    const GameClient = load('gameclient.js', timer);
+    const client = new GameClient('quest.universnovastudio.online', 443);
+
+    let reconnectingNotice = null;
+    let reconnectedNotice = null;
+
+    client.onReconnecting((attempt, max) => {
+        reconnectingNotice = { attempt, max };
+    });
+    client.onReconnected(() => {
+        reconnectedNotice = true;
+    });
+
+    client.hasLoggedWelcome = true;
+    client.attemptAutoReconnect();
+
+    assert.ok(client._isReconnecting);
+    assert.equal(client._reconnectAttempts, 1);
+    assert.ok(reconnectingNotice);
+    assert.equal(reconnectingNotice.attempt, 1);
+    assert.equal(reconnectingNotice.max, 15);
+    clearTimeout(client._reconnectTimer);
+});

@@ -592,9 +592,32 @@ function(Camera, Item, Character, Player, Timer) {
                               true,
                               color);
             } else if(entity.bossTitle) {
+                var bx = (entity.x + 8) * this.scale,
+                    by = (entity.y - 18) * this.scale,
+                    s = this.scale;
+                // Dessiner une véritable couronne dorée vectorielle au-dessus du nom du Boss
+                var ctx = this.context,
+                    cy = by - (9 * s);
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(bx - 5 * s, cy + 2 * s);
+                ctx.lineTo(bx - 6 * s, cy - 3 * s);
+                ctx.lineTo(bx - 2.5 * s, cy - 0.5 * s);
+                ctx.lineTo(bx, cy - 4.5 * s);
+                ctx.lineTo(bx + 2.5 * s, cy - 0.5 * s);
+                ctx.lineTo(bx + 6 * s, cy - 3 * s);
+                ctx.lineTo(bx + 5 * s, cy + 2 * s);
+                ctx.closePath();
+                ctx.fillStyle = "#facc15";
+                ctx.strokeStyle = "#713f12";
+                ctx.lineWidth = Math.max(1, 0.8 * s);
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+
                 this.drawText(entity.bossTitle,
-                              (entity.x + 8) * this.scale,
-                              (entity.y - 18) * this.scale,
+                              bx,
+                              by,
                               true,
                               "#ff4d4d");
             }

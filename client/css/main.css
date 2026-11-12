@@ -2909,11 +2909,155 @@ body.started #google-name-chooser {
 }
 
 /* ==========================================================================
+   BANNIÈRE DE RECONNEXION RÉSEAU & TOAST DE DÉCOUVERTE DE ZONE
+   ========================================================================== */
+#nova-reconnect-hud {
+    position: absolute;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 18px;
+    background: rgba(185, 28, 28, 0.95);
+    border: 2px solid #fca5a5;
+    border-radius: 999px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.75), 0 0 12px rgba(239, 68, 68, 0.6);
+    color: #ffffff;
+    font-family: 'GraphicPixel', monospace, sans-serif;
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    user-select: none;
+    -webkit-user-select: none;
+    pointer-events: none;
+    animation: novaReconnectPulse 1.4s ease-in-out infinite alternate;
+}
+
+#nova-reconnect-hud.reconnected {
+    background: rgba(22, 101, 52, 0.95);
+    border-color: #86efac;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.75), 0 0 12px rgba(34, 197, 94, 0.6);
+    animation: none;
+}
+
+#nova-reconnect-hud .reconnect-spinner {
+    font-size: 15px;
+    display: inline-block;
+    animation: novaSpin 1s linear infinite;
+}
+#nova-reconnect-hud.reconnected .reconnect-spinner {
+    animation: none;
+}
+
+@keyframes novaReconnectPulse {
+    0% { transform: translateX(-50%) scale(0.98); opacity: 0.9; }
+    100% { transform: translateX(-50%) scale(1.02); opacity: 1; }
+}
+@keyframes novaSpin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Toast de Découverte de Région (Zone Title Toast) */
+#nova-zone-toast {
+    position: absolute;
+    top: 48px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-20px);
+    z-index: 30;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+#nova-zone-toast.active {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.zone-toast-inner {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 22px;
+    border-radius: 10px;
+    background: radial-gradient(circle, rgba(24, 18, 8, 0.94) 0%, rgba(15, 23, 42, 0.9) 100%);
+    border: 1.5px solid #ca8a04;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.8), 0 0 15px rgba(234, 179, 8, 0.35);
+    text-align: left;
+}
+
+.zone-toast-icon {
+    font-size: 26px;
+    line-height: 1;
+    filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.6));
+}
+
+.zone-toast-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.zone-toast-type {
+    font-family: 'GraphicPixel', monospace, sans-serif;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #facc15;
+}
+
+#nova-zone-toast-title {
+    font-family: 'GraphicPixel', 'AdvoCut', sans-serif;
+    font-size: 20px;
+    line-height: 1.2;
+    color: #ffffff;
+    letter-spacing: 1px;
+    text-shadow: 0 2px 4px #000, 0 0 8px rgba(250, 204, 21, 0.5);
+}
+
+#nova-zone-toast-desc {
+    font-family: 'GraphicPixel', monospace, sans-serif;
+    font-size: 11px;
+    color: #cbd5e1;
+    margin-top: 2px;
+}
+
+@media screen and (max-width: 800px) {
+    #nova-zone-toast {
+        top: 38px;
+    }
+    .zone-toast-inner {
+        padding: 6px 14px;
+        gap: 8px;
+    }
+    .zone-toast-icon {
+        font-size: 20px;
+    }
+    #nova-zone-toast-title {
+        font-size: 15px;
+    }
+    #nova-zone-toast-desc {
+        font-size: 10px;
+    }
+    #nova-reconnect-hud {
+        font-size: 11px;
+        padding: 5px 12px;
+        top: 10px;
+    }
+}
+
+
+/* ==========================================================================
    SUPPRESSION DES ÉLÉMENTS SUPERPOSÉS REDONDANTS (PAD & SAC FLOTTANT)
    ET RESTAURATION DE LA BARRE PIXEL-ART AUTHENTIQUE (barsheet.png)
    ========================================================================== */
 
-/* Retirer définitivement les boutons superposés 🕹️ Pad, -/100%/+, 🎒 Sac et le panneau flottant #nova-inventory
+/* Retirer définitivement les boutons superposés Pad, -/100%/+, Sac et le panneau flottant #nova-inventory
    (Le Sac à dos, l'Équipement et les Réglages du Pad sont intégrés proprement dans le Hub Parchemin #nova-hub) */
 #inventory-toggle,
 #touch-controls-toggle,
@@ -3990,3 +4134,283 @@ body.nova-mobile-app #nova-chat-log-panel.collapsed {
         font-size: 11px;
     }
 }
+
+/* ==========================================================================
+   MARQUEURS ET REPÈRES VISUELS DE RÉGIONS SUR LA CARTE (#nova-region-banner)
+   ========================================================================== */
+
+#nova-region-banner {
+    position: absolute;
+    top: 18px;
+    left: 50%;
+    transform: translate(-50%, -20px) scale(0.9);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 55;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: opacity 0.45s ease, transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#nova-region-banner.active {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+}
+
+.region-banner-content {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 20px;
+    border-radius: 999px;
+    background: radial-gradient(circle, rgba(28, 20, 12, 0.95) 0%, rgba(15, 23, 42, 0.92) 85%);
+    border: 1.5px solid #ca8a04;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.8), 0 0 14px rgba(250, 204, 21, 0.45);
+}
+
+.region-deco {
+    font-size: 13px;
+    color: #fde047;
+    text-shadow: 0 0 6px #eab308;
+    animation: regionSparklePulse 1.6s ease-in-out infinite alternate;
+}
+
+.region-text {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+#nova-region-name {
+    font-family: 'GraphicPixel', 'AdvoCut', sans-serif;
+    font-size: 18px;
+    font-weight: bold;
+    letter-spacing: 1.5px;
+    color: #fef08a;
+    text-transform: uppercase;
+    text-shadow: 0 2px 0 #713f12, 1px 1px 0 #000, -1px -1px 0 #000;
+}
+
+#nova-region-desc {
+    font-family: 'GraphicPixel', sans-serif;
+    font-size: 11px;
+    color: #cbd5e1;
+    letter-spacing: 0.5px;
+    text-shadow: 1px 1px 0 #000;
+}
+
+@keyframes regionSparklePulse {
+    0% { transform: scale(0.85); opacity: 0.6; }
+    100% { transform: scale(1.15); opacity: 1; }
+}
+
+/* ==========================================================================
+   BANNIÈRE DE RECONNEXION AUTOMATIQUE TRANSPARENTE (#nova-reconnect-banner)
+   ========================================================================== */
+
+#nova-reconnect-banner {
+    position: absolute;
+    top: 52px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 70;
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 16px;
+    background: rgba(185, 28, 28, 0.92);
+    border: 1.5px solid #f87171;
+    border-radius: 8px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.7), 0 0 12px rgba(239, 68, 68, 0.5);
+    color: #fef2f2;
+    font-family: 'GraphicPixel', sans-serif;
+    font-size: 12px;
+    user-select: none;
+}
+
+#nova-reconnect-banner.active {
+    display: inline-flex;
+    animation: reconnectPulse 1.8s ease-in-out infinite alternate;
+}
+
+#nova-reconnect-banner.restored {
+    background: rgba(22, 101, 52, 0.92);
+    border-color: #4ade80;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.7), 0 0 12px rgba(34, 197, 94, 0.5);
+}
+
+.reconnect-spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: reconnectSpin 0.8s linear infinite;
+}
+
+#nova-reconnect-banner.restored .reconnect-spinner {
+    border: none;
+    width: 14px;
+    height: 14px;
+    animation: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+#nova-reconnect-banner.restored .reconnect-spinner::before {
+    content: "";
+    display: inline-block;
+    width: 5px;
+    height: 10px;
+    border: solid #86efac;
+    border-width: 0 2.5px 2.5px 0;
+    transform: rotate(45deg);
+}
+
+#nova-reconnect-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 4px;
+    color: #ffffff;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+#nova-reconnect-btn:hover {
+    background: rgba(255, 255, 255, 0.35);
+}
+
+@keyframes reconnectSpin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes reconnectPulse {
+    0% { opacity: 0.92; }
+    100% { opacity: 1; filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.8)); }
+}
+
+/* ==========================================================================
+   SYSTÈME D'ICÔNES VECTORIELLES SVG (.nova-svg-icon) — SANS EMOJI
+   ========================================================================== */
+
+.nova-svg-icon {
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    vertical-align: -2.5px;
+    flex-shrink: 0;
+    pointer-events: none;
+}
+
+.nova-svg-icon.xs {
+    width: 12px;
+    height: 12px;
+    vertical-align: -1.5px;
+}
+
+.nova-svg-icon.sm {
+    width: 14px;
+    height: 14px;
+    vertical-align: -2px;
+}
+
+.nova-svg-icon.lg {
+    width: 18px;
+    height: 18px;
+    vertical-align: -3px;
+}
+
+.nova-svg-icon.xl {
+    width: 24px;
+    height: 24px;
+    vertical-align: -5px;
+}
+
+.hub-tab .nova-svg-icon,
+.hub-action-btn .nova-svg-icon,
+.hub-spawn-btn .nova-svg-icon,
+.chat-log-title .nova-svg-icon,
+#nova-door-diag-btn .nova-svg-icon {
+    margin-right: 4px;
+}
+
+#nova-lives-icons {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.life-heart {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.life-heart .nova-svg-icon {
+    width: 16px;
+    height: 16px;
+    vertical-align: middle;
+}
+
+.life-heart.active .nova-svg-icon {
+    color: #ef4444;
+    filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.65));
+}
+
+.life-heart.lost .nova-svg-icon {
+    color: #475569;
+    opacity: 0.55;
+}
+
+.hub-map-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: rgba(133, 77, 14, 0.14);
+    border: 1px solid rgba(180, 130, 70, 0.45);
+    color: #854d0e;
+    flex-shrink: 0;
+}
+
+.hub-map-icon .nova-svg-icon {
+    width: 20px;
+    height: 20px;
+}
+
+.status-dot-icon {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    margin-right: 5px;
+    vertical-align: middle;
+}
+
+.status-dot-icon.online {
+    background: #22c55e;
+    box-shadow: 0 0 6px rgba(34, 197, 94, 0.8);
+}
+
+.status-dot-icon.offline {
+    background: #94a3b8;
+    border: 1px solid #64748b;
+}
+
+.levelup-sparkles .sparkle .nova-svg-icon {
+    width: 16px;
+    height: 16px;
+}
+
+.region-deco .nova-svg-icon {
+    width: 14px;
+    height: 14px;
+}
+

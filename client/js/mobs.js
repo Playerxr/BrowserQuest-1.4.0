@@ -145,7 +145,7 @@ define(['mob', 'timer'], function(Mob, Timer) {
                 this.attackCooldown = new Timer(this.atkRate);
                 this.aggroRange = 3;
                 this.customScale = 1.35;
-                this.bossTitle = "👑 Roi Squelette";
+                this.bossTitle = "Roi Squelette";
             },
 
             idle: function(orientation) {
@@ -166,7 +166,7 @@ define(['mob', 'timer'], function(Mob, Timer) {
                 this.setAttackRate(1400);
                 this.aggroRange = 3;
                 this.customScale = 1.5;
-                this.bossTitle = "👑 Grand Ogre";
+                this.bossTitle = "Grand Ogre";
             }
         }),
 
@@ -181,7 +181,7 @@ define(['mob', 'timer'], function(Mob, Timer) {
                 this.setAttackRate(950);
                 this.aggroRange = 3;
                 this.customScale = 1.5;
-                this.bossTitle = "👑 Spectre Ancien";
+                this.bossTitle = "Spectre Ancien";
             }
         }),
 
@@ -195,7 +195,7 @@ define(['mob', 'timer'], function(Mob, Timer) {
                 this.setAttackRate(850);
                 this.aggroRange = 3;
                 this.customScale = 1.5;
-                this.bossTitle = "👑 Seigneur de la Mort";
+                this.bossTitle = "Seigneur de la Mort";
             },
 
             idle: function(orientation) {
@@ -216,7 +216,7 @@ define(['mob', 'timer'], function(Mob, Timer) {
                 this.setAttackRate(1100);
                 this.aggroRange = 3;
                 this.customScale = 1.5;
-                this.bossTitle = "👑 Archimage Noir";
+                this.bossTitle = "Archimage Noir";
             }
         }),
 
@@ -229,7 +229,7 @@ define(['mob', 'timer'], function(Mob, Timer) {
                 this.setAttackRate(1000);
                 this.aggroRange = 3;
                 this.customScale = 1.55;
-                this.bossTitle = "👑 Œil Abyssal";
+                this.bossTitle = "Œil Abyssal";
             }
         }),
 
@@ -242,7 +242,7 @@ define(['mob', 'timer'], function(Mob, Timer) {
                 this.setAttackRate(1100);
                 this.aggroRange = 3;
                 this.customScale = 1.55;
-                this.bossTitle = "👑 Reine Crabe Géante";
+                this.bossTitle = "Reine Crabe Géante";
             }
         }),
 
@@ -255,7 +255,7 @@ define(['mob', 'timer'], function(Mob, Timer) {
                 this.setAttackRate(800);
                 this.aggroRange = 3;
                 this.customScale = 1.5;
-                this.bossTitle = "👑 Roi Gobelin";
+                this.bossTitle = "Roi Gobelin";
             }
         }),
 
@@ -270,7 +270,7 @@ define(['mob', 'timer'], function(Mob, Timer) {
                 this.setAttackRate(950);
                 this.aggroRange = 3;
                 this.customScale = 1.55;
-                this.bossTitle = "👑 Vipère Titan";
+                this.bossTitle = "Vipère Titan";
             }
         }),
 
@@ -285,7 +285,7 @@ define(['mob', 'timer'], function(Mob, Timer) {
                 this.setAttackRate(1200);
                 this.aggroRange = 3;
                 this.customScale = 1.5;
-                this.bossTitle = "👑 Colosse Squelette";
+                this.bossTitle = "Colosse Squelette";
             }
         })
     };

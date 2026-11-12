@@ -94,7 +94,7 @@ define(['character', 'exceptions'], function(Character, Exceptions) {
             if(item) {
                 if(item.type === "armor" || item.type === "weapon" || Types.isHealingItem(item.kind)) {
                     if(!this.hasFreeInventorySlot(item.kind)) {
-                        throw new Exceptions.LootException("Sac à dos plein ! Ouvrez le Hub (🎒 Sac à dos) pour libérer un emplacement.");
+                        throw new Exceptions.LootException("Sac à dos plein ! Ouvrez le Hub (Sac à dos) pour libérer un emplacement.");
                     }
                     log.info('Player ' + this.id + ' stored ' + item.id + ' in backpack');
                     return;

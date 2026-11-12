@@ -920,6 +920,7 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
                 self.resetCamera();
                 self.updatePlateauMode();
                 self.audioManager.updateMusic();
+                self.updateRegionCheck();
 
                 self.addEntity(self.player);
                 self.player.dirtyRect = self.renderer.getEntityBoundingRect(self.player);
@@ -1068,6 +1069,7 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
                     }
 
                     self.updatePlayerCheckpoint();
+                    self.updateRegionCheck();
 
                     if(!self.player.isDead) {
                         self.audioManager.updateMusic();
@@ -1749,8 +1751,26 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
 					}
 				});
 
+                self.client.onReconnecting(function(attempt, maxAttempts) {
+                    if(self.app && typeof self.app.showReconnectBanner === 'function') {
+                        self.app.showReconnectBanner("Connexion interrompue — Reconnexion...", attempt, maxAttempts);
+                    }
+                });
+
+                self.client.onReconnected(function() {
+                    if(self.app && typeof self.app.hideReconnectBanner === 'function') {
+                        self.app.hideReconnectBanner("Connexion rétablie !");
+                    }
+                    if(self.player && !self.player.isDead) {
+                        self.startPingLoop();
+                    }
+                });
+
                 self.client.onDisconnected(function(message) {
                     self.stopPingLoop();
+                    if(self.app && typeof self.app.hideReconnectBanner === 'function') {
+                        self.app.hideReconnectBanner();
+                    }
                     if(self.player) {
                         self.player.die();
                     }
@@ -2567,6 +2587,7 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
             if(this.doorDiagnostics) {
                 this.doorDiagnostics.completeDoorTeleport(guardsApplied);
             }
+            this.updateRegionCheck();
             if(this.app && typeof this.app.updateHubMapLiveStatus === 'function') {
                 this.app.updateHubMapLiveStatus();
             }
@@ -2811,7 +2832,7 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
                 duration: 360
             });
             if(spec.aoe && this.infoManager) {
-                this.infoManager.addDamageInfo("⚡ " + spec.powerName, attacker.x, attacker.y - 24, "exp", 1400);
+                this.infoManager.addDamageInfo(spec.powerName, attacker.x, attacker.y - 24, "exp", 1400);
             }
         },
 
@@ -3187,7 +3208,7 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
             }
 
             if(this.app && typeof this.app.addChatMessage === 'function') {
-                this.app.addChatMessage("Système", "🎉 Level Up! Vous avez atteint le Niveau " + lvl + " !", "system");
+                this.app.addChatMessage("Système", "[Niveau Supérieur] Level Up! Vous avez atteint le Niveau " + lvl + " !", "system");
             }
 
             if(this.playerlevelup_callback) {
@@ -3426,6 +3447,51 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
                 } else {
                     throw e;
                 }
+            }
+        },
+
+        updateRegionCheck: function() {
+            if(!this.player || !this.map || !this.map.musicAreas) return;
+            var px = this.player.gridX,
+                py = this.player.gridY,
+                currentRegion = null;
+
+            // Détection de la région selon les coordonnées de la carte
+            var regions = [
+                { id: "village", name: "Village de Nova", desc: "Zone paisible & Commerçants", x: 1, y: 195, w: 84, h: 58 },
+                { id: "beach", name: "Plage du Sud", desc: "Littoral sauvage & Crabes géants", x: 2, y: 265, w: 84, h: 48 },
+                { id: "forest", name: "Grande Forêt", desc: "Bois denses & Éclaireurs Gobelins", x: 4, y: 140, w: 81, h: 54 },
+                { id: "graveyard", name: "Cimetière Maudit", desc: "Terres profanées & Squelettes", x: 1, y: 110, w: 50, h: 32 },
+                { id: "desert", name: "Désert Brûlant", desc: "Dunes arides & Serpents", x: 4, y: 65, w: 85, h: 72 },
+                { id: "cave", name: "Cryptes & Grottes Souterraines", desc: "Profondeurs sombres & Trésors cachés", x: 105, y: 100, w: 70, h: 150 },
+                { id: "lavaland", name: "Terres de Lave & Volcan", desc: "Rivières de magma & Dangers extrêmes", x: 1, y: 1, w: 115, h: 64 },
+                { id: "boss", name: "Repaire du Boss Suprême", desc: "Antre du Seigneur des Ténèbres", x: 135, y: 20, w: 40, h: 55 }
+            ];
+
+            for(var i = 0; i < regions.length; i++) {
+                var r = regions[i];
+                if(px >= r.x && px < (r.x + r.w) && py >= r.y && py < (r.y + r.h)) {
+                    currentRegion = r;
+                    break;
+                }
+            }
+
+            if(!currentRegion) {
+                currentRegion = { id: "wilds", name: "Terres Sauvages", desc: "Contrées inexplorées" };
+            }
+
+            if(!this._lastRegionId || this._lastRegionId !== currentRegion.id) {
+                this._lastRegionId = currentRegion.id;
+                this.triggerRegionNotification(currentRegion.name, currentRegion.desc);
+            }
+        },
+
+        triggerRegionNotification: function(name, desc) {
+            if(this.app && typeof this.app.showRegionBanner === 'function') {
+                this.app.showRegionBanner(name, desc);
+            }
+            if(this.app && typeof this.app.addChatMessage === 'function') {
+                this.app.addChatMessage("Exploration", "Vous entrez dans la région : " + name + " (" + desc + ")", "global");
             }
         }
     });

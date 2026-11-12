@@ -133,7 +133,7 @@ module.exports = function(wsServer) {
                                     player.connection.sendUTF8("banned");
                                     player.connection.close("Banni par un administrateur.");
                                 } else {
-                                    player.sendHubState("👑 Profil mis à jour par un administrateur !", false);
+                                    player.sendHubState("[Admin] Profil mis à jour par un administrateur !", false);
                                 }
                             }
                         });
