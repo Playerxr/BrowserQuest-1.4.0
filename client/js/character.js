@@ -367,7 +367,11 @@ define(['entity', 'transition', 'timer'], function(Entity, Transition, Timer) {
         engage: function(character) {
             this.attackingMode = true;
             this.setTarget(character);
-            this.follow(character);
+            if(this.canReachTarget()) {
+                this.lookAtTarget();
+            } else {
+                this.follow(character);
+            }
         },
 
         disengage: function() {
@@ -545,8 +549,9 @@ define(['entity', 'transition', 'timer'], function(Entity, Transition, Timer) {
         canReachTarget: function() {
             if(this.hasTarget()) {
                 var atkRange = 1;
-                if(this.weapon && Types.getWeaponRange) {
-                    atkRange = Types.getWeaponRange(this.weapon);
+                var weaponKind = this.weapon || this.weaponName;
+                if(weaponKind && Types.getWeaponRange) {
+                    atkRange = Types.getWeaponRange(weaponKind);
                 } else if(Types.getMobAttackRange && this.kind) {
                     atkRange = Types.getMobAttackRange(this.kind);
                 }

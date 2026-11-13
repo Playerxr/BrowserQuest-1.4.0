@@ -906,7 +906,7 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
                 self.player.experience = experience;
                 self.player.level = Types.getLevel(experience);
                 var armorRank = Types.getArmorRank(Types.getKindFromString(armor)),
-                    maxHp = 80 + ((armorRank + 1) * 40);
+                    maxHp = 80 + (armorRank * 30);
                 self.player.maxHitPoints = (hp > maxHp) ? hp : maxHp;
                 self.player.hitPoints = hp;
                 self.player.inventory = inventory || [null, null, null, null, null, null];
@@ -1105,7 +1105,7 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
                     }
 
                     self.player.forEachAttacker(function(attacker) {
-                        if(!attacker.isAdjacentNonDiagonal(self.player)) {
+                        if(!attacker.canReachTarget() && !attacker.isAdjacentNonDiagonal(self.player)) {
                             attacker.follow(self.player);
                         }
                     });
@@ -1236,7 +1236,7 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
 
 
                                             entity.forEachAttacker(function(attacker) {
-                                                if(attacker.isAdjacent(attacker.target)) {
+                                                if(attacker.canReachTarget() || attacker.isAdjacent(attacker.target)) {
                                                     attacker.lookAtTarget();
                                                 } else {
                                                     attacker.follow(entity);
@@ -1262,7 +1262,7 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
                                             }
 
                                             entity.forEachAttacker(function(attacker) {
-                                                if(!attacker.isAdjacentNonDiagonal(entity) && attacker.id !== self.playerId) {
+                                                if(!attacker.canReachTarget() && !attacker.isAdjacentNonDiagonal(entity) && attacker.id !== self.playerId) {
                                                     attacker.follow(entity);
                                                 }
                                             });
@@ -1602,7 +1602,7 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
                         isHurt;
 
                     if(player && !player.isDead && !player.invincible) {
-                        isHurt = points <= player.hitPoints;
+                        isHurt = points < player.hitPoints;
                         diff = points - player.hitPoints;
                         player.hitPoints = points;
 
@@ -1615,7 +1615,7 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
                             if(self.playerhurt_callback) {
                                 self.playerhurt_callback();
                             }
-                        } else if(!isRegen){
+                        } else if(!isRegen && diff > 0){
                             self.infoManager.addDamageInfo("+"+diff, player.x, player.y - 15, "healed");
                         }
                         self.updateBars();
@@ -1624,7 +1624,9 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
 
                 self.client.onPlayerChangeMaxHitPoints(function(hp) {
                     self.player.maxHitPoints = hp;
-                    self.player.hitPoints = hp;
+                    if(self.player.hitPoints > hp || self.player.hitPoints <= 0) {
+                        self.player.hitPoints = hp;
+                    }
                     self.updateBars();
                 });
 
@@ -2842,7 +2844,8 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
 
         spawnPlayerArrow: function(attacker, target) {
             if(!attacker || !target) return;
-            var isGolden = (attacker.weapon === Types.Entities.GOLDENBOW || attacker.weapon === 'goldenbow');
+            var w = attacker.weapon || attacker.weaponName;
+            var isGolden = (w === Types.Entities.GOLDENBOW || w === 'goldenbow');
             this.projectiles.push({
                 sx: attacker.x + 8,
                 sy: attacker.y + 4,
@@ -2876,7 +2879,9 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
             }
 
             if(character.isAttacking() && (!character.previousTarget || character.id === this.playerId)) {
-                var isRanged = (character instanceof Mob && Types.isRangedMob && Types.isRangedMob(character.kind));
+                var isRangedMob = (character instanceof Mob && Types.isRangedMob && Types.isRangedMob(character.kind));
+                var isRangedPlayer = (character instanceof Player && Types.isRangedWeapon && Types.isRangedWeapon(character.weapon || character.weaponName));
+                var isRanged = isRangedMob || isRangedPlayer;
                 var isMoving = isRanged ? false : this.tryMovingToADifferentTile(character); // Don't let multiple mobs stack on the same tile when attacking a player.
 
                 if(character.canAttack(time)) {
@@ -2890,14 +2895,13 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
 
                         character.hit();
 
-                        if(isRanged && character.hasTarget()) {
+                        if(isRangedMob && character.hasTarget()) {
                             this.spawnMobProjectile(character, character.target);
+                        } else if(isRangedPlayer && character.hasTarget()) {
+                            this.spawnPlayerArrow(character, character.target);
                         }
 
                         if(character.id === this.playerId) {
-                            if(Types.isRangedWeapon && Types.isRangedWeapon(this.player.weapon) && character.hasTarget()) {
-                                this.spawnPlayerArrow(character, character.target);
-                            }
                             this.triggerAttackHaptic();
                             this.client.sendHit(character.target);
                         }
@@ -3387,7 +3391,7 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
         makeAttackerFollow: function(attacker) {
               var target = attacker.target;
 
-              if(attacker.isAdjacent(attacker.target)) {
+              if(attacker.canReachTarget() || attacker.isAdjacent(attacker.target)) {
                     attacker.lookAtTarget();
               } else {
                   attacker.follow(target);

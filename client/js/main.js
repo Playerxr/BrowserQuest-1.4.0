@@ -151,7 +151,7 @@ define(['jquery', 'app', 'entrypoint'], function($, App, EntryPoint) {
                     return false;
                 } else {
                     app.currentPage -= 1;
-                    $achievements.removeClass().addClass('active page' + app.currentPage);
+                    $achievements.removeClass().addClass('active clickable page' + app.currentPage);
                 }
             });
 
@@ -164,13 +164,13 @@ define(['jquery', 'app', 'entrypoint'], function($, App, EntryPoint) {
                     return false;
                 } else {
                     app.currentPage += 1;
-                    $achievements.removeClass().addClass('active page' + app.currentPage);
+                    $achievements.removeClass().addClass('active clickable page' + app.currentPage);
                 }
             });
 
             $('#notifications div').bind(TRANSITIONEND, app.resetMessagesPosition.bind(app));
 
-            $('.close').click(function() {
+            $('.close, #achievements-count').click(function() {
                 app.hideWindows();
             });
 

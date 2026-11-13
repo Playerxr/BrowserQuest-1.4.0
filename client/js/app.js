@@ -1014,17 +1014,17 @@ define(['jquery', 'storage'], function($, Storage) {
             };
 
             this.game.player.onSetTarget(function(target, name, mouseover){
+                if(!target) return;
                 var el = '#inspector';
-                var sprite = target.sprite,
-                    x = ((sprite.animationData.idle_down.length-1)*sprite.width),
-                    y = ((sprite.animationData.idle_down.row)*sprite.height);
-                var displayName = frenchEntityNames[name] || name;
+                var displayName = frenchEntityNames[name] || target.name || name;
                 $(el+' .name').text(displayName);
 
-                //Show how much Health creature has left.
-                if(target.healthPoints){
-                    $(el+" .health").css('width', Math.round(target.healthPoints/target.maxHp*100)+'%');
-                } else{
+                // Show how much Health creature has left (100% when undamaged)
+                if(typeof target.healthPoints === 'number' && target.maxHp > 0){
+                    $(el+" .health").css('width', Math.max(0, Math.min(100, Math.round(target.healthPoints/target.maxHp*100)))+'%');
+                } else if(Types.isMob(target.kind)) {
+                    $(el+" .health").css('width', '100%');
+                } else {
                     $(el+" .health").css('width', '0%');
                 }
                 var level = Types.getMobLevel(Types.getKindFromString(name));
