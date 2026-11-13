@@ -1484,6 +1484,10 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
                     var entity = null;
 
                     if(id !== self.playerId) {
+                        if(!self.entityIdExists(id)) {
+                            self.client.sendWho([id]);
+                            return;
+                        }
                         entity = self.getEntityById(id);
 
                         if(entity) {
