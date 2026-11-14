@@ -729,6 +729,39 @@
                     <button type="button" id="nova-door-diag-btn" class="clickable" title="Ouvrir l'outil de diagnostic des portes et maisons (F9)"><svg class="nova-svg-icon xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/><circle cx="15" cy="12" r="1" fill="currentColor"/></svg>Diag</button>
                 </div>
 
+                <!-- Mini-Carte Radar Déplaçable (Canvas 2D) en haut à droite -->
+                <div id="nova-minimap" class="clickable" aria-label="Mini-carte radar">
+                    <div id="nova-minimap-header" title="Glisser pour déplacer la mini-carte">
+                        <span class="minimap-title">
+                            <svg class="nova-svg-icon xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+                            <span id="nova-minimap-region">Village de Nova</span>
+                        </span>
+                        <div class="minimap-controls">
+                            <button type="button" id="nova-minimap-zoom-btn" title="Changer l'échelle du radar (1x / 2x / Carte)">1x</button>
+                            <button type="button" id="nova-minimap-reset-btn" title="Réinitialiser la position en haut à droite" aria-label="Réinitialiser la position">
+                                <svg class="nova-svg-icon xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                            </button>
+                            <button type="button" id="nova-minimap-toggle-btn" title="Réduire / Agrandir la mini-carte" aria-label="Réduire ou agrandir">&minus;</button>
+                        </div>
+                    </div>
+                    <div id="nova-minimap-body">
+                        <div class="minimap-canvas-wrap">
+                            <canvas id="nova-minimap-canvas" width="172" height="120"></canvas>
+                        </div>
+                        <div id="nova-minimap-footer">
+                            <span id="nova-minimap-coords">X: --, Y: --</span>
+                            <span id="nova-minimap-poi" title="Point d'intérêt à proximité"></span>
+                        </div>
+                        <div id="nova-minimap-legend">
+                            <span class="mm-leg"><i class="mm-dot player"></i>Vous</span>
+                            <span class="mm-leg"><i class="mm-dot npc"></i>PNJ</span>
+                            <span class="mm-leg"><i class="mm-dot mob"></i>Monstre</span>
+                            <span class="mm-leg"><i class="mm-dot boss"></i>Boss</span>
+                            <span class="mm-leg"><i class="mm-dot door"></i>Porte</span>
+                        </div>
+                    </div>
+                </div>
+
                 <div id="nova-door-diag-overlay" class="clickable" style="display:none;">
                     <div class="door-diag-header">
                         <span><svg class="nova-svg-icon sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/><circle cx="15" cy="12" r="1" fill="currentColor"/></svg> Diagnostic Portes &amp; Maisons</span>

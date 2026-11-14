@@ -41,6 +41,7 @@ define(['jquery', 'storage'], function($, Storage) {
             this.initGoogleAuth();
             this.initRememberMe();
             this.initChatLog();
+            this.initMinimap();
 
             if(localStorage && (localStorage.data || localStorage.getItem('nova_remember_username'))) {
                 this.frontPage = 'loadcharacter';
@@ -2914,6 +2915,542 @@ define(['jquery', 'storage'], function($, Storage) {
                 }, 2200);
             } else {
                 $b.removeClass('active restored');
+            }
+        },
+
+        // =========================================================================
+        // MINI-CARTE RADAR DÉPLAÇABLE EN HAUT À DROITE (#nova-minimap)
+        // =========================================================================
+        initMinimap: function() {
+            var self = this;
+            this._minimapZoomModes = [
+                { label: '1x', scale: 2.8 },
+                { label: '2x', scale: 1.5 },
+                { label: 'Carte', scale: 0.75 }
+            ];
+            this._minimapZoomIdx = 0;
+            this._minimapTerrainCanvas = null;
+            this._lastMinimapRender = 0;
+            this._minimapPOIs = [
+                { key: 'village', name: 'Village de Nova', shortName: 'Village', x: 43, y: 211 },
+                { key: 'beach', name: 'Plage du Sud', shortName: 'Plage', x: 52, y: 268 },
+                { key: 'forest', name: 'Grande Forêt', shortName: 'Forêt', x: 55, y: 165 },
+                { key: 'desert', name: 'Désert Aride', shortName: 'Désert', x: 130, y: 175 },
+                { key: 'graveyard', name: 'Cimetière Maudit', shortName: 'Cimetière', x: 28, y: 72 },
+                { key: 'lavacave', name: 'Terres de Lave', shortName: 'Volcan', x: 115, y: 65 },
+                { key: 'bossroom', name: 'Antre des Boss', shortName: 'Boss', x: 50, y: 88 },
+                { key: 'castle', name: 'Sanctuaire Royal', shortName: 'Château', x: 148, y: 275 }
+            ];
+
+            var $minimap = $('#nova-minimap');
+            if(!$minimap.length) return;
+
+            $minimap.on('click mousedown touchstart', function(e) {
+                e.stopPropagation();
+            });
+
+            // Restaurer la position enregistrée si valide
+            try {
+                var savedPos = localStorage ? localStorage.getItem('nova_minimap_pos') : null;
+                if(savedPos) {
+                    var parsed = JSON.parse(savedPos);
+                    if(parsed && typeof parsed.left === 'number' && typeof parsed.top === 'number') {
+                        $minimap.css({
+                            left: Math.max(4, parsed.left) + 'px',
+                            top: Math.max(4, parsed.top) + 'px',
+                            right: 'auto'
+                        });
+                    }
+                }
+            } catch(e) {}
+
+            // Bouton Zoom (1x / 2x / Carte)
+            $('#nova-minimap-zoom-btn').on('click', function(e) {
+                e.stopPropagation();
+                self._minimapZoomIdx = (self._minimapZoomIdx + 1) % self._minimapZoomModes.length;
+                var mode = self._minimapZoomModes[self._minimapZoomIdx];
+                $(this).text(mode.label);
+                self.renderMinimap(true);
+            });
+
+            // Bouton Reset Position (retour en haut à droite)
+            $('#nova-minimap-reset-btn').on('click', function(e) {
+                e.stopPropagation();
+                self.resetMinimapPosition();
+            });
+
+            // Bouton Réduire / Agrandir
+            $('#nova-minimap-toggle-btn').on('click', function(e) {
+                e.stopPropagation();
+                $minimap.toggleClass('collapsed');
+                var isCollapsed = $minimap.hasClass('collapsed');
+                $(this).html(isCollapsed ? '+' : '&minus;');
+                if(!isCollapsed) {
+                    self.renderMinimap(true);
+                }
+            });
+
+            // Glisser-déposer (Souris + Tactile)
+            var dragState = null;
+
+            var startDrag = function(clientX, clientY, targetEl) {
+                if($(targetEl).closest('.minimap-controls button').length) {
+                    return;
+                }
+                var parent = $minimap.offsetParent()[0] || document.getElementById('container') || document.body;
+                var parentRect = parent.getBoundingClientRect();
+                var rect = $minimap[0].getBoundingClientRect();
+                dragState = {
+                    startX: clientX,
+                    startY: clientY,
+                    origLeft: rect.left - parentRect.left,
+                    origTop: rect.top - parentRect.top,
+                    parentW: parentRect.width,
+                    parentH: parentRect.height,
+                    boxW: rect.width,
+                    boxH: rect.height,
+                    moved: false
+                };
+            };
+
+            var moveDrag = function(clientX, clientY) {
+                if(!dragState) return;
+                var dx = clientX - dragState.startX;
+                var dy = clientY - dragState.startY;
+                if(!dragState.moved && Math.abs(dx) + Math.abs(dy) < 4) {
+                    return;
+                }
+                dragState.moved = true;
+                $minimap.addClass('dragging');
+                var newLeft = Math.max(4, Math.min(dragState.parentW - dragState.boxW - 4, dragState.origLeft + dx));
+                var newTop = Math.max(4, Math.min(dragState.parentH - dragState.boxH - 4, dragState.origTop + dy));
+                $minimap.css({
+                    left: Math.round(newLeft) + 'px',
+                    top: Math.round(newTop) + 'px',
+                    right: 'auto'
+                });
+            };
+
+            var endDrag = function() {
+                if(!dragState) return;
+                var wasMoved = dragState.moved;
+                dragState = null;
+                $minimap.removeClass('dragging');
+                if(wasMoved) {
+                    self._minimapJustDragged = Date.now();
+                    try {
+                        if(localStorage) {
+                            var pos = $minimap.position();
+                            localStorage.setItem('nova_minimap_pos', JSON.stringify({
+                                left: Math.round(pos.left),
+                                top: Math.round(pos.top)
+                            }));
+                        }
+                    } catch(e) {}
+                }
+            };
+
+            $('#nova-minimap-header').on('mousedown', function(e) {
+                if(e.which !== 1) return;
+                startDrag(e.clientX, e.clientY, e.target);
+                e.preventDefault();
+            });
+
+            $(window).on('mousemove.novaminimap', function(e) {
+                if(dragState) {
+                    moveDrag(e.clientX, e.clientY);
+                }
+            });
+
+            $(window).on('mouseup.novaminimap', function() {
+                if(dragState) {
+                    endDrag();
+                }
+            });
+
+            var headerEl = document.getElementById('nova-minimap-header');
+            if(headerEl && headerEl.addEventListener) {
+                headerEl.addEventListener('touchstart', function(e) {
+                    if(e.touches && e.touches.length === 1) {
+                        startDrag(e.touches[0].clientX, e.touches[0].clientY, e.target);
+                    }
+                }, { passive: true });
+                window.addEventListener('touchmove', function(e) {
+                    if(dragState && e.touches && e.touches.length === 1) {
+                        moveDrag(e.touches[0].clientX, e.touches[0].clientY);
+                    }
+                }, { passive: true });
+                window.addEventListener('touchend', function() {
+                    if(dragState) {
+                        endDrag();
+                    }
+                }, { passive: true });
+            }
+
+            // Clic sur le canvas de la mini-carte : déplacement vers la case cliquée si accessible dans la zone actuelle
+            $('#nova-minimap-canvas').on('click', function(e) {
+                e.stopPropagation();
+                if(self._minimapJustDragged && Date.now() - self._minimapJustDragged < 250) {
+                    return;
+                }
+                if(!self.game || !self.game.started || !self.game.player || !self.game.map || !self.game.camera) {
+                    return;
+                }
+                var canvas = this;
+                var rect = canvas.getBoundingClientRect();
+                if(!rect.width || !rect.height) return;
+                var clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
+                var clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
+                var mode = self._minimapZoomModes[self._minimapZoomIdx] || self._minimapZoomModes[0];
+                var scale = mode.scale;
+                var gx = self.game.player.gridX;
+                var gy = self.game.player.gridY;
+                var targetX = Math.round(gx + (clickX - canvas.width / 2) / scale);
+                var targetY = Math.round(gy + (clickY - canvas.height / 2) / scale);
+
+                var cam = self.game.camera;
+                if(targetX >= cam.gridX && targetX < cam.gridX + cam.gridW &&
+                   targetY >= cam.gridY && targetY < cam.gridY + cam.gridH &&
+                   !self.game.map.isColliding(targetX, targetY)) {
+                    self.game.makePlayerGoTo(targetX, targetY);
+                }
+            });
+        },
+
+        resetMinimapPosition: function() {
+            var $minimap = $('#nova-minimap');
+            $minimap.css({
+                top: '36px',
+                right: '10px',
+                left: 'auto'
+            });
+            try {
+                if(localStorage) {
+                    localStorage.removeItem('nova_minimap_pos');
+                }
+            } catch(e) {}
+        },
+
+        ensureMinimapTerrainCache: function() {
+            if(this._minimapTerrainCanvas) {
+                return this._minimapTerrainCanvas;
+            }
+            if(!this.game || !this.game.map || !this.game.map.isLoaded || !this.game.map.grid) {
+                return null;
+            }
+            var map = this.game.map;
+            var w = map.width || 172;
+            var h = map.height || 314;
+            var offscreen = document.createElement('canvas');
+            offscreen.width = w;
+            offscreen.height = h;
+            var ctx = offscreen.getContext('2d');
+            var imgData = ctx.createImageData(w, h);
+            var data = imgData.data;
+
+            for(var y = 0; y < h; y++) {
+                for(var x = 0; x < w; x++) {
+                    var idx = (y * w + x) * 4;
+                    var colliding = map.isColliding(x, y);
+                    var isInterior = (x <= 28 && y <= 50) || (x >= 130 && x <= 170 && y >= 190 && y <= 245);
+                    var r, g, b;
+
+                    if(isInterior) {
+                        if(colliding) { r = 30; g = 24; b = 20; }
+                        else { r = 92; g = 66; b = 42; }
+                    } else if(y >= 250) {
+                        // Plage du Sud & Sanctuaire
+                        if(colliding) { r = 32; g = 68; b = 96; }
+                        else { r = 138; g = 118; b = 72; }
+                    } else if(x >= 115 && y >= 130 && y < 250) {
+                        // Désert Aride
+                        if(colliding) { r = 82; g = 62; b = 42; }
+                        else { r = 128; g = 98; b = 56; }
+                    } else if(y < 105 && x >= 75) {
+                        // Terres de Lave & Volcan
+                        if(colliding) { r = 74; g = 28; b = 24; }
+                        else { r = 52; g = 34; b = 34; }
+                    } else if(y < 115 && x < 75) {
+                        // Cimetière Maudit & Antre des Boss
+                        if(colliding) { r = 56; g = 60; b = 78; }
+                        else { r = 38; g = 44; b = 62; }
+                    } else if(y < 190) {
+                        // Grande Forêt
+                        if(colliding) { r = 28; g = 54; b = 36; }
+                        else { r = 42; g = 76; b = 46; }
+                    } else {
+                        // Village de Nova & Plaines
+                        if(colliding) { r = 58; g = 72; b = 64; }
+                        else { r = 48; g = 88; b = 52; }
+                    }
+
+                    data[idx] = r;
+                    data[idx + 1] = g;
+                    data[idx + 2] = b;
+                    data[idx + 3] = 255;
+                }
+            }
+
+            ctx.putImageData(imgData, 0, 0);
+            this._minimapTerrainCanvas = offscreen;
+            return offscreen;
+        },
+
+        renderMinimap: function(force) {
+            if(!this.game || !this.game.started || !this.game.player) {
+                return;
+            }
+            var now = Date.now();
+            if(!force && now - this._lastMinimapRender < 80) {
+                return;
+            }
+            this._lastMinimapRender = now;
+
+            var $minimap = $('#nova-minimap');
+            if(!$minimap.length || $minimap.hasClass('collapsed')) {
+                return;
+            }
+
+            var canvas = document.getElementById('nova-minimap-canvas');
+            if(!canvas || !canvas.getContext) {
+                return;
+            }
+
+            var ctx = canvas.getContext('2d');
+            var cw = canvas.width;
+            var ch = canvas.height;
+            var player = this.game.player;
+            var gx = player.gridX;
+            var gy = player.gridY;
+
+            var mode = this._minimapZoomModes[this._minimapZoomIdx] || this._minimapZoomModes[0];
+            var scale = mode.scale;
+            var halfW = (cw / 2) / scale;
+            var halfH = (ch / 2) / scale;
+
+            // 1. Fond sombre + Terrain pré-calculé
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, cw, ch);
+
+            var terrain = this.ensureMinimapTerrainCache();
+            if(terrain) {
+                ctx.save();
+                ctx.imageSmoothingEnabled = false;
+                var sx = gx - halfW;
+                var sy = gy - halfH;
+                var sw = halfW * 2;
+                var sh = halfH * 2;
+                ctx.drawImage(
+                    terrain,
+                    0, 0, terrain.width, terrain.height,
+                    Math.round((0 - sx) * scale),
+                    Math.round((0 - sy) * scale),
+                    Math.round(terrain.width * scale),
+                    Math.round(terrain.height * scale)
+                );
+                ctx.restore();
+            }
+
+            // 2. Grille radar subtile
+            ctx.strokeStyle = 'rgba(148, 163, 184, 0.10)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(cw / 2, 0);
+            ctx.lineTo(cw / 2, ch);
+            ctx.moveTo(0, ch / 2);
+            ctx.lineTo(cw, ch / 2);
+            ctx.stroke();
+
+            // 3. Cadre de la caméra actuelle
+            if(this.game.camera) {
+                var cam = this.game.camera;
+                var camX = (cam.gridX - gx) * scale + cw / 2;
+                var camY = (cam.gridY - gy) * scale + ch / 2;
+                var camW = cam.gridW * scale;
+                var camH = cam.gridH * scale;
+                ctx.strokeStyle = 'rgba(250, 204, 21, 0.35)';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(Math.round(camX) + 0.5, Math.round(camY) + 0.5, Math.round(camW), Math.round(camH));
+            }
+
+            // 4. Portes & Téléporteurs proches (Points d'intérêt d'exploration)
+            if(this.game.map && this.game.map.doors) {
+                var doors = this.game.map.doors;
+                ctx.fillStyle = '#38bdf8';
+                for(var d = 0; d < doors.length; d++) {
+                    var door = doors[d];
+                    if(Math.abs(door.x - gx) <= halfW + 1 && Math.abs(door.y - gy) <= halfH + 1) {
+                        var dx = Math.round((door.x - gx) * scale + cw / 2);
+                        var dy = Math.round((door.y - gy) * scale + ch / 2);
+                        ctx.fillRect(dx - 2, dy - 2, 4, 4);
+                    }
+                }
+            }
+
+            // 5. Points d'intérêt majeurs (Régions & Repères)
+            var isInterior = (gx >= 0 && gx <= 28 && gy >= 0 && gy <= 50) ||
+                             (gx >= 130 && gx <= 170 && gy >= 190 && gy <= 245);
+            var closestPoi = null;
+            var closestPoiDist = 999999;
+
+            if(this._minimapPOIs) {
+                for(var pIdx = 0; pIdx < this._minimapPOIs.length; pIdx++) {
+                    var poi = this._minimapPOIs[pIdx];
+                    var dist = Math.round(Math.sqrt((gx - poi.x) * (gx - poi.x) + (gy - poi.y) * (gy - poi.y)));
+                    if(dist < closestPoiDist) {
+                        closestPoiDist = dist;
+                        closestPoi = poi;
+                    }
+
+                    // Si le repère est visible sur le canvas du radar, dessiner un marqueur losange doré
+                    if(!isInterior && Math.abs(poi.x - gx) <= halfW - 2 && Math.abs(poi.y - gy) <= halfH - 2) {
+                        var px = Math.round((poi.x - gx) * scale + cw / 2);
+                        var py = Math.round((poi.y - gy) * scale + ch / 2);
+                        ctx.save();
+                        ctx.translate(px, py);
+                        ctx.rotate(Math.PI / 4);
+                        ctx.fillStyle = '#fbbf24';
+                        ctx.strokeStyle = '#0f172a';
+                        ctx.lineWidth = 1.2;
+                        ctx.fillRect(-3, -3, 6, 6);
+                        ctx.strokeRect(-3, -3, 6, 6);
+                        ctx.restore();
+                    }
+                }
+            }
+
+            // 6. Entités vivantes et objets autour du joueur (PNJ, Coffres, Monstres, Boss, Joueurs)
+            var entities = this.game.entities || {};
+            var pulse = 0.5 + 0.5 * Math.sin(now / 180);
+
+            for(var id in entities) {
+                if(!Object.prototype.hasOwnProperty.call(entities, id)) continue;
+                var ent = entities[id];
+                if(!ent || ent.id === player.id || ent.isDead) continue;
+                var ex = ent.gridX;
+                var ey = ent.gridY;
+                if(typeof ex !== 'number' || typeof ey !== 'number') continue;
+                if(Math.abs(ex - gx) > halfW + 1 || Math.abs(ey - gy) > halfH + 1) continue;
+
+                var mx = Math.round((ex - gx) * scale + cw / 2);
+                var my = Math.round((ey - gy) * scale + ch / 2);
+
+                if(Types.isMob(ent.kind)) {
+                    if(Types.isBoss && Types.isBoss(ent.kind)) {
+                        // Boss : Marqueur couronne/étoile pulsante orange et or
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.arc(mx, my, 4.5 + pulse * 1.5, 0, Math.PI * 2);
+                        ctx.strokeStyle = 'rgba(254, 240, 138, 0.85)';
+                        ctx.lineWidth = 1.2;
+                        ctx.stroke();
+
+                        ctx.beginPath();
+                        ctx.arc(mx, my, 3.5, 0, Math.PI * 2);
+                        ctx.fillStyle = '#f97316';
+                        ctx.fill();
+                        ctx.strokeStyle = '#0f172a';
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+                        ctx.restore();
+                    } else {
+                        // Monstre standard
+                        ctx.beginPath();
+                        ctx.arc(mx, my, 2.3, 0, Math.PI * 2);
+                        ctx.fillStyle = '#ef4444';
+                        ctx.fill();
+                    }
+                } else if(Types.isNpc(ent.kind)) {
+                    // PNJ : Losange émeraude
+                    ctx.save();
+                    ctx.translate(mx, my);
+                    ctx.rotate(Math.PI / 4);
+                    ctx.fillStyle = '#34d399';
+                    ctx.fillRect(-2.2, -2.2, 4.4, 4.4);
+                    ctx.restore();
+                } else if(Types.isPlayer(ent.kind)) {
+                    // Autre joueur en ligne
+                    ctx.beginPath();
+                    ctx.arc(mx, my, 2.8, 0, Math.PI * 2);
+                    ctx.fillStyle = '#60a5fa';
+                    ctx.fill();
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 0.8;
+                    ctx.stroke();
+                } else if(Types.isChest(ent.kind) || Types.isItem(ent.kind)) {
+                    // Coffre ou butin au sol
+                    ctx.fillStyle = '#facc15';
+                    ctx.fillRect(mx - 1.5, my - 1.5, 3, 3);
+                }
+            }
+
+            // 7. Joueur actuel au centre (Flèche directionnelle dorée + anneau radar)
+            var cx = Math.round(cw / 2);
+            var cy = Math.round(ch / 2);
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(cx, cy, 5 + pulse * 1.5, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(250, 204, 21, 0.45)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            ctx.translate(cx, cy);
+            var angle = 0;
+            if(player.orientation === Types.Orientations.UP) angle = 0;
+            else if(player.orientation === Types.Orientations.RIGHT) angle = Math.PI / 2;
+            else if(player.orientation === Types.Orientations.DOWN) angle = Math.PI;
+            else if(player.orientation === Types.Orientations.LEFT) angle = -Math.PI / 2;
+            ctx.rotate(angle);
+
+            ctx.beginPath();
+            ctx.moveTo(0, -4.8);
+            ctx.lineTo(3.8, 3.8);
+            ctx.lineTo(0, 1.8);
+            ctx.lineTo(-3.8, 3.8);
+            ctx.closePath();
+            ctx.fillStyle = '#fef08a';
+            ctx.fill();
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+            ctx.restore();
+
+            // 8. Points cardinaux (N, S, E, O)
+            ctx.font = 'bold 8px monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = 'rgba(226, 232, 240, 0.75)';
+            ctx.fillText('N', cw / 2, 6);
+            ctx.fillText('S', cw / 2, ch - 5);
+            ctx.fillText('O', 6, ch / 2);
+            ctx.fillText('E', cw - 6, ch / 2);
+
+            // 9. Mise à jour des textes (Région, Coordonnées X/Y et Point d'intérêt le plus proche)
+            var coordsText = 'X:' + gx + ' Y:' + gy;
+            if(this._lastMinimapCoords !== coordsText) {
+                this._lastMinimapCoords = coordsText;
+                $('#nova-minimap-coords').text(coordsText);
+            }
+
+            var regionLabel = isInterior ? 'Intérieur / Abri' : (closestPoi ? closestPoi.name : 'Terres de Nova');
+            if(this.game.player && this.game.player.inGuildHall) {
+                regionLabel = 'Salon de Guilde';
+            }
+            if(this._lastMinimapRegion !== regionLabel) {
+                this._lastMinimapRegion = regionLabel;
+                $('#nova-minimap-region').text(regionLabel);
+            }
+
+            var poiText = '';
+            if(isInterior) {
+                poiText = 'Zone de repos';
+            } else if(closestPoi) {
+                poiText = closestPoi.shortName + ' (' + closestPoiDist + 'm)';
+            }
+            if(this._lastMinimapPoiText !== poiText) {
+                this._lastMinimapPoiText = poiText;
+                $('#nova-minimap-poi').text(poiText);
             }
         }
     });

@@ -18,6 +18,7 @@ define(['character', 'timer'], function(Character, Timer) {
             this.updateInfos();
             this.updateKeyboardMovement();
             this.updateRegionToast();
+            this.updateMinimap();
         },
 
         updateCharacters: function() {
@@ -350,14 +351,19 @@ define(['character', 'timer'], function(Character, Timer) {
                 if(this.game.app && typeof this.game.app.showRegionBanner === 'function') {
                     this.game.app.showRegionBanner(closest.name, closest.desc);
                 }
-                if(this.game.app && typeof this.game.app.addChatMessage === 'function') {
-                    this.game.app.addChatMessage({
-                        sender: 'Exploration',
-                        text: '[Région] Vous entrez dans : ' + closest.name + ' (' + closest.desc + ')',
-                        type: 'system',
-                        channel: 'all'
-                    });
+                if(!isFirst && this.game.app && typeof this.game.app.addChatMessage === 'function') {
+                    this.game.app.addChatMessage(
+                        'Exploration',
+                        '[Région] Vous entrez dans : ' + closest.name + ' (' + closest.desc + ')',
+                        'system'
+                    );
                 }
+            }
+        },
+
+        updateMinimap: function() {
+            if(this.game && this.game.app && typeof this.game.app.renderMinimap === 'function') {
+                this.game.app.renderMinimap(false);
             }
         }
     });
