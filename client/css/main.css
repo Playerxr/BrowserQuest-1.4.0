@@ -1846,29 +1846,39 @@ footer, header, hgroup, menu, nav, section {
 
 /* Responsive mobile / petits écrans */
 @media screen and (max-width: 1000px) {
-    /* Cadre de jeu (#container & #canvas) sur mobile pour occuper l'écran */
+    /* Cadre de jeu (#container & #canvas) en plein écran sur mobile/tablette */
     .game #container {
-        width: 96vw !important;
-        max-width: 960px !important;
-        height: auto !important;
-        left: 50% !important;
-        top: 50% !important;
-        transform: translate(-50%, -50%) !important;
+        width: 100vw !important;
+        max-width: none !important;
+        height: 100vh !important;
+        left: 0 !important;
+        top: 0 !important;
+        transform: none !important;
         margin: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
     }
 
     .game #canvasborder {
-        padding: 4px !important;
-        background: rgba(15, 18, 28, 0.95) !important;
-        border: 2px solid #c6a64b !important;
-        border-radius: 8px !important;
+        padding: 0 !important;
+        background: #000 !important;
+        border: none !important;
+        border-radius: 0 !important;
         box-sizing: border-box !important;
+        flex: 1 1 auto !important;
+        width: 100% !important;
+        height: 100% !important;
+        min-height: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
     }
 
     .game #canvas {
         width: 100% !important;
-        height: calc(100vh - 54px) !important;
-        max-height: 448px !important;
+        height: 100% !important;
+        max-height: none !important;
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
         position: relative !important;
     }
 
@@ -1879,8 +1889,8 @@ footer, header, hgroup, menu, nav, section {
 
     .game #bubbles {
         width: 100% !important;
-        height: calc(100vh - 54px) !important;
-        max-height: 448px !important;
+        height: 100% !important;
+        max-height: none !important;
         top: 0 !important;
         margin-bottom: 0 !important;
         position: absolute !important;
@@ -2262,35 +2272,55 @@ body.touch-device #mobile-controls.visible {
     transition: transform 0.15s ease;
 }
 
-/* 3. Cadre de jeu universellement élargi et panoramique (Desktop & Mobile) */
+/* 3. Mode Plein Écran intégral bord à bord en jeu (Desktop, Tablette & Mobile) */
+body.game footer {
+    display: none !important;
+}
+
 .game #container {
-    width: min(1560px, 96vw) !important;
-    max-width: 98vw !important;
-    height: auto !important;
-    position: absolute !important;
-    left: 50% !important;
-    top: 50% !important;
-    transform: translate(-50%, -50%) !important;
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    max-width: none !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    left: 0 !important;
+    top: 0 !important;
+    transform: none !important;
     margin: 0 !important;
+    padding: 0 !important;
     box-sizing: border-box !important;
+    display: flex !important;
+    flex-direction: column !important;
+    background: #000 !important;
 }
 
 .game #canvasborder {
+    position: relative !important;
+    flex: 1 1 auto !important;
     width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
     box-sizing: border-box !important;
-    padding: 6px !important;
-    background: rgba(12, 16, 26, 0.95) !important;
-    border: 2px solid #ca8a04 !important;
-    border-radius: 8px !important;
+    padding: 0 !important;
+    background: #000 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
 }
 
 .game #canvas {
-    width: 100% !important;
-    height: auto !important;
-    aspect-ratio: 960 / 448 !important;
-    max-height: 82vh !important;
     position: relative !important;
+    flex: 1 1 auto !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    aspect-ratio: auto !important;
     display: block !important;
+    overflow: hidden !important;
 }
 
 .game #canvas canvas {
@@ -2306,6 +2336,58 @@ body.touch-device #mobile-controls.visible {
     top: 0 !important;
     left: 0 !important;
     pointer-events: none !important;
+}
+
+.game #bar-container {
+    flex: 0 0 34px !important;
+}
+
+.game #expbar {
+    bottom: 38px !important;
+    right: 3px !important;
+    left: auto !important;
+    width: 5px !important;
+    max-height: calc(100% - 46px) !important;
+}
+
+/* Bouton Plein Écran Navigateur dans #nova-ping-hud */
+#nova-fullscreen-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 18px;
+    padding: 0;
+    margin-left: 2px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid #8c7355;
+    border-radius: 4px;
+    color: #fef08a;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+#nova-fullscreen-btn:hover {
+    background: #ca8a04;
+    border-color: #fef08a;
+    color: #0f172a;
+}
+
+#nova-fullscreen-btn .fs-exit {
+    display: none;
+}
+
+body.nova-fullscreen #nova-fullscreen-btn .fs-enter {
+    display: none;
+}
+
+body.nova-fullscreen #nova-fullscreen-btn .fs-exit {
+    display: inline-block;
+}
+
+body.nova-fullscreen #nova-fullscreen-btn {
+    background: rgba(202, 138, 4, 0.28);
+    border-color: #facc15;
 }
 
 /* 4. Panneau Carte du Monde & Voyages */
@@ -3136,21 +3218,34 @@ body.started #google-name-chooser {
     pointer-events: none !important;
 }
 
-/* Barre inférieure authentique BrowserQuest (barsheet.png) adaptée à toute largeur sans étirement ni superposition */
+/* Barre inférieure authentique BrowserQuest (barsheet.png) adaptée à toute largeur sans répétition d'icônes */
 .game #bar-container {
     position: relative !important;
     height: 34px !important;
     width: 100% !important;
     top: 0 !important;
     background-image: url('../img/2/barsheet.png') !important;
-    background-repeat: repeat-x !important;
+    background-repeat: no-repeat !important;
     background-position: left top !important;
     background-size: 960px auto !important;
+    background-color: #35373d !important;
     border: none !important;
     border-radius: 0 !important;
     box-shadow: none !important;
     z-index: 25 !important;
     overflow: hidden !important;
+}
+
+.game #bar-container::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 274px;
+    right: 244px;
+    height: 34px;
+    background: linear-gradient(180deg, #1b1c20 0px, #1b1c20 2px, #5c5e66 2px, #5c5e66 4px, #35373d 4px, #35373d 30px, #25262b 30px, #25262b 32px, #121316 32px, #121316 34px);
+    pointer-events: none;
+    z-index: 12;
 }
 
 /* Extrémité droite authentique de barsheet.png (compteur de joueurs + 4 cadres de boutons) */
@@ -4689,19 +4784,23 @@ body.nova-mobile-app #nova-chat-log-panel.collapsed {
     border-radius: 1px;
 }
 
-@media screen and (max-width: 760px) {
+@media screen and (max-width: 760px), screen and (max-height: 460px) {
     #nova-minimap {
-        width: 136px;
+        width: 146px;
         top: 34px;
         right: 6px;
     }
     .minimap-canvas-wrap,
     #nova-minimap-canvas {
-        width: 124px;
-        height: 92px;
+        width: 134px !important;
+        height: 86px !important;
     }
     #nova-minimap-legend {
         display: none;
+    }
+    #nova-chat-log-panel {
+        width: 255px;
+        height: 122px;
     }
 }
 

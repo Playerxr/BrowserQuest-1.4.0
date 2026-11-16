@@ -545,6 +545,11 @@ define(['jquery', 'app', 'entrypoint'], function($, App, EntryPoint) {
                         case Types.Keys.P:
                             $('#playercount').click();
                             break;
+                        case 70:
+                            if(app && typeof app.toggleFullscreen === 'function') {
+                                app.toggleFullscreen();
+                            }
+                            break;
                         default:
                             break;
                     }

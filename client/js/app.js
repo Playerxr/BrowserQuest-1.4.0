@@ -42,6 +42,7 @@ define(['jquery', 'storage'], function($, Storage) {
             this.initRememberMe();
             this.initChatLog();
             this.initMinimap();
+            this.initFullscreen();
 
             if(localStorage && (localStorage.data || localStorage.getItem('nova_remember_username'))) {
                 this.frontPage = 'loadcharacter';
@@ -1050,10 +1051,17 @@ define(['jquery', 'storage'], function($, Storage) {
             });
         },
          initExpBar: function(){
-            var maxHeight = $("#expbar").height();
+            var $exp = $("#expbar");
+            var canvasH = ($('#canvas').height() || 0);
+            var maxHeight = this._expBarMaxHeight || $exp.height() || (canvasH > 80 ? canvasH - 16 : 380);
+            if (maxHeight > 20) {
+                this._expBarMaxHeight = maxHeight;
+            }
 
             this.game.onPlayerExpChange(function(expInThisLevel, expForLevelUp){
-               var barHeight = Math.round((maxHeight / expForLevelUp) * (expInThisLevel > 0 ? expInThisLevel : 0));
+               var canvasNow = $('#canvas').height();
+               var effectiveMax = (canvasNow && canvasNow > 80) ? (canvasNow - 16) : maxHeight;
+               var barHeight = Math.round((effectiveMax / expForLevelUp) * (expInThisLevel > 0 ? expInThisLevel : 0));
                $("#expbar").css('height', barHeight + "px");
             });
         },
@@ -1537,6 +1545,7 @@ define(['jquery', 'storage'], function($, Storage) {
                     this.game.renderer.rescale(newScale);
                 }
             }
+            this.clampMinimapPosition();
         },
 
         // =========================================================================
@@ -3452,6 +3461,97 @@ define(['jquery', 'storage'], function($, Storage) {
                 this._lastMinimapPoiText = poiText;
                 $('#nova-minimap-poi').text(poiText);
             }
+        },
+
+        // =========================================================================
+        // MODE PLEIN ÉCRAN NAVIGATEUR (API Fullscreen + Raccourci F)
+        // =========================================================================
+        initFullscreen: function() {
+            var self = this;
+            var $btn = $('#nova-fullscreen-btn');
+
+            if($btn.length) {
+                $btn.on('click', function(e) {
+                    e.stopPropagation();
+                    self.toggleFullscreen();
+                });
+            }
+
+            var onFsChange = function() {
+                self.updateFullscreenUI();
+                setTimeout(function() {
+                    self.resizeUi();
+                }, 60);
+            };
+
+            document.addEventListener('fullscreenchange', onFsChange);
+            document.addEventListener('webkitfullscreenchange', onFsChange);
+            document.addEventListener('mozfullscreenchange', onFsChange);
+            document.addEventListener('MSFullscreenChange', onFsChange);
+            this.updateFullscreenUI();
+        },
+
+        isFullscreen: function() {
+            return Boolean(
+                document.fullscreenElement ||
+                document.webkitFullscreenElement ||
+                document.mozFullScreenElement ||
+                document.msFullscreenElement
+            );
+        },
+
+        updateFullscreenUI: function() {
+            var active = this.isFullscreen();
+            $('body').toggleClass('nova-fullscreen', active);
+            var $btn = $('#nova-fullscreen-btn');
+            if($btn.length) {
+                $btn.attr('title', active ? 'Quitter le plein écran (Touche F)' : 'Plein écran (Touche F)');
+                $btn.attr('aria-label', active ? 'Quitter le plein écran' : 'Basculer en plein écran');
+            }
+        },
+
+        toggleFullscreen: function() {
+            var self = this;
+            var docEl = document.documentElement;
+            try {
+                if(this.isFullscreen()) {
+                    var exitFn = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+                    if(exitFn) {
+                        var resExit = exitFn.call(document);
+                        if(resExit && typeof resExit.catch === 'function') {
+                            resExit.catch(function() {});
+                        }
+                    }
+                } else {
+                    var reqFn = docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.mozRequestFullScreen || docEl.msRequestFullscreen;
+                    if(reqFn) {
+                        var resReq = reqFn.call(docEl);
+                        if(resReq && typeof resReq.catch === 'function') {
+                            resReq.catch(function() {});
+                        }
+                    }
+                }
+            } catch(e) {}
+            setTimeout(function() {
+                self.updateFullscreenUI();
+            }, 80);
+        },
+
+        clampMinimapPosition: function() {
+            var $minimap = $('#nova-minimap');
+            if(!$minimap.length || $minimap.css('right') !== 'auto') return;
+            var parent = $minimap.offsetParent()[0] || document.getElementById('container') || document.body;
+            var parentRect = parent.getBoundingClientRect();
+            var rect = $minimap[0].getBoundingClientRect();
+            if(parentRect.width <= 0 || parentRect.height <= 0) return;
+            var left = parseFloat($minimap.css('left')) || 4;
+            var top = parseFloat($minimap.css('top')) || 36;
+            var clampedLeft = Math.max(4, Math.min(parentRect.width - rect.width - 4, left));
+            var clampedTop = Math.max(4, Math.min(parentRect.height - rect.height - 4, top));
+            $minimap.css({
+                left: Math.round(clampedLeft) + 'px',
+                top: Math.round(clampedTop) + 'px'
+            });
         }
     });
 

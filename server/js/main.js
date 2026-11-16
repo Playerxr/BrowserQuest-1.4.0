@@ -207,6 +207,37 @@ function main(config) {
         // Display the full error stack, to aid debugging
         log.error('uncaughtException: ' + e.stack);
     });
+
+    var shuttingDown = false;
+    var shutdown = function () {
+        if (shuttingDown) return;
+        shuttingDown = true;
+        if (typeof checkPopulationInterval !== 'undefined' && checkPopulationInterval) {
+            clearInterval(checkPopulationInterval);
+        }
+        var forceTimer = setTimeout(function () {
+            process.exit(0);
+        }, 400);
+        if (typeof forceTimer.unref === 'function') forceTimer.unref();
+
+        var finalize = function () {
+            try {
+                if (databaseHandler && databaseHandler.db && typeof databaseHandler.db.close === 'function') {
+                    databaseHandler.db.close();
+                }
+            } catch (e) {}
+            process.exit(0);
+        };
+
+        if (server && typeof server.close === 'function') {
+            server.close(finalize);
+        } else {
+            finalize();
+        }
+    };
+
+    process.on('SIGTERM', shutdown);
+    process.on('SIGINT', shutdown);
 }
 
 function getWorldDistribution(worlds) {

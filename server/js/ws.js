@@ -200,9 +200,17 @@ WS.MultiVersionWebsocketServer = Server.extend({
         }
 
         this._httpServer = http.createServer(app);
-        this._httpServer.listen(port, '0.0.0.0', function () {
-            log.info('Serveur (HTTP + WebSocket) en écoute sur port ' + port + ' (0.0.0.0)');
-        });
+        var listenHost = process.env.HOST || undefined;
+        var onListening = function () {
+            var addr = self._httpServer.address();
+            var hostLabel = addr && typeof addr === 'object' ? addr.address : (listenHost || 'dual-stack');
+            log.info('Serveur (HTTP + WebSocket) en écoute sur port ' + port + ' (' + hostLabel + ')');
+        };
+        if (listenHost) {
+            this._httpServer.listen(port, listenHost, onListening);
+        } else {
+            this._httpServer.listen(port, onListening);
+        }
 
         this._wss = new WebSocketServer({
             server: this._httpServer,
@@ -229,6 +237,36 @@ WS.MultiVersionWebsocketServer = Server.extend({
                 self.errorCallback(e);
             }
         });
+    },
+
+    close: function (callback) {
+        var self = this;
+        try {
+            if (this._wss && this._wss.clients) {
+                this._wss.clients.forEach(function (client) {
+                    try { client.terminate(); } catch (e) {}
+                });
+            }
+        } catch (e) {}
+
+        var closeHttp = function () {
+            if (self._httpServer) {
+                if (typeof self._httpServer.closeAllConnections === 'function') {
+                    self._httpServer.closeAllConnections();
+                }
+                self._httpServer.close(function () {
+                    if (callback) callback();
+                });
+            } else if (callback) {
+                callback();
+            }
+        };
+
+        if (this._wss) {
+            this._wss.close(closeHttp);
+        } else {
+            closeHttp();
+        }
     },
 
     _acceptAuthAttempt: function (address, now) {

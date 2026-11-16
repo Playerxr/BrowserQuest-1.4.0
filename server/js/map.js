@@ -19,8 +19,12 @@ var Map = cls.Class.extend({
                 return;
             }
 
-            fs.readFile(filepath, function (err, file) {
-                var json = JSON.parse(file.toString());
+            fs.readFile(filepath, function (err, data) {
+                if (err) {
+                    log.error('Failed to read map file ' + filepath + ': ' + err.message);
+                    return;
+                }
+                var json = JSON.parse(data.toString());
 
                 self.initMap(json);
             });
@@ -83,17 +87,15 @@ var Map = cls.Class.extend({
         this.grid = [];
 
         if (this.isLoaded) {
+            var collisionSet = new Set(this.collisions || []);
             var tileIndex = 0;
             for (var j, i = 0; i < this.height; i++) {
-                this.grid[i] = [];
+                var row = new Array(this.width);
                 for (j = 0; j < this.width; j++) {
-                    if (_.include(this.collisions, tileIndex)) {
-                        this.grid[i][j] = 1;
-                    } else {
-                        this.grid[i][j] = 0;
-                    }
+                    row[j] = collisionSet.has(tileIndex) ? 1 : 0;
                     tileIndex += 1;
                 }
+                this.grid[i] = row;
             }
             log.debug('Collision grid generated.');
         }
