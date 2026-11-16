@@ -217,7 +217,23 @@ WS.MultiVersionWebsocketServer = Server.extend({
             maxPayload: MAX_PAYLOAD,
             perMessageDeflate: false
         });
+        // Keepalive : un ping toutes les 25 s evite que Cloudflare / Render
+        // coupent les sockets inactifs (~100 s) et detecte les connexions mortes.
+        this._keepAliveTimer = setInterval(function () {
+            self._wss.clients.forEach(function (client) {
+                if (client.isAlive === false) {
+                    try { client.terminate(); } catch (e) {}
+                    return;
+                }
+                client.isAlive = false;
+                try { client.ping(); } catch (e) {}
+            });
+        }, 25000);
+        if (typeof this._keepAliveTimer.unref === 'function') this._keepAliveTimer.unref();
+
         this._wss.on('connection', function (socket, req) {
+            socket.isAlive = true;
+            socket.on('pong', function () { socket.isAlive = true; });
             if (socket._socket && typeof socket._socket.setNoDelay === 'function') {
                 socket._socket.setNoDelay(true);
             }
