@@ -1580,6 +1580,15 @@ define(['jquery', 'storage'], function($, Storage) {
                 $('#achievementsbutton').removeClass('active');
             });
 
+            // Classement : changement de categorie
+            $('.challenge-board-tabs button').click(function(e) {
+                e.stopPropagation();
+                $('.challenge-board-tabs button').removeClass('active');
+                $(this).addClass('active');
+                self.leaderboardKey = $(this).attr('data-board');
+                self.renderLeaderboard();
+            });
+
             // Navigation par onglets
             $('.hub-tab').click(function(e) {
                 e.stopPropagation();
@@ -1596,6 +1605,10 @@ define(['jquery', 'storage'], function($, Storage) {
                 $('#hub-panel-' + tab).addClass('active').show();
                 if(tab === 'map') {
                     self.updateHubMapLiveStatus();
+                }
+                if(tab === 'challenges' && self.game && self.game.client) {
+                    self.game.client.sendHub('progress_get', {});
+                    self.game.client.sendHub('leaderboard_get', {});
                 }
                 if(self.game && self.game.client) {
                     self.game.client.sendHub('refresh', {});
@@ -2252,6 +2265,17 @@ define(['jquery', 'storage'], function($, Storage) {
                 return;
             }
 
+            if(subAction === 'progress_data') {
+                this.renderChallenges(payload);
+                return;
+            }
+
+            if(subAction === 'leaderboard_data') {
+                this.leaderboardData = payload;
+                this.renderLeaderboard();
+                return;
+            }
+
             if(subAction === 'gold_update') {
                 $('#hub-gold-amount').text(payload.gold);
                 if(payload.reward && this.game && this.game.player) {
@@ -2330,6 +2354,60 @@ define(['jquery', 'storage'], function($, Storage) {
                     this.showMessage(payload.notice.text);
                 }
             }
+        },
+
+        renderChallenges: function(data) {
+            var self = this;
+            if(!data) return;
+            var $quests = $('#hub-daily-quests').empty();
+            $.each(data.quests || [], function(i, q) {
+                var pct = Math.round(100 * q.progress / q.goal);
+                var $row = $('<div class="challenge-row">').toggleClass('done', !!q.done);
+                $row.append($('<div class="challenge-text">').text(q.text));
+                $row.append($('<div class="challenge-reward">').text('+' + q.gold + ' or, +' + q.exp + ' XP'));
+                var $bar = $('<div class="challenge-bar">').append($('<span>').css('width', pct + '%'));
+                $row.append($bar);
+                $row.append($('<div class="challenge-count">').text(q.progress + ' / ' + q.goal));
+                $quests.append($row);
+            });
+            var streak = data.stats ? data.stats.streak : 0;
+            $('#hub-daily-streak').text(data.allDone
+                ? 'Toutes les quêtes sont terminées. Série : ' + streak + ' jour(s).'
+                : 'Terminez les 3 quêtes pour un bonus. Série actuelle : ' + streak + ' jour(s).');
+
+            var $titles = $('#hub-titles-list').empty();
+            var stats = data.stats || {};
+            var labels = { kills: 'victoires', bossKills: 'boss', questsDone: 'quêtes', bestStreak: 'jours de série' };
+            $.each(data.titles || [], function(i, t) {
+                var $row = $('<div class="challenge-row title-row">').toggleClass('done', !!t.unlocked);
+                $row.append($('<div class="challenge-text">').text(t.name));
+                $row.append($('<div class="challenge-reward">').text(
+                    t.unlocked ? (data.activeTitle === t.name ? 'Équipé' : 'Débloqué')
+                               : (stats[t.stat] || 0) + ' / ' + t.need + ' ' + (labels[t.stat] || '')));
+                if(t.unlocked) {
+                    $row.addClass('equippable').click(function(e) {
+                        e.stopPropagation();
+                        var equipped = data.activeTitle === t.name;
+                        self.game.client.sendHub('title_set', { id: equipped ? '' : t.id });
+                    });
+                }
+                $titles.append($row);
+            });
+        },
+
+        renderLeaderboard: function() {
+            var board = this.leaderboardData;
+            var key = this.leaderboardKey || 'level';
+            var $list = $('#hub-leaderboard').empty();
+            if(!board || !board[key]) return;
+            var unit = { level: 'Niv.', kills: 'victoires', gold: 'or' };
+            $.each(board[key], function(i, r) {
+                var value = key === 'level' ? 'Niv. ' + r.level : r[key] + ' ' + unit[key];
+                var $row = $('<div class="challenge-row">');
+                $row.append($('<div class="challenge-text">').text((i + 1) + '. ' + r.name));
+                $row.append($('<div class="challenge-reward">').text(value));
+                $list.append($row);
+            });
         },
 
         renderNpcQuestUI: function(activeQuest) {

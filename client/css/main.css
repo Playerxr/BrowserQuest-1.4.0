@@ -4805,3 +4805,14 @@ body.nova-mobile-app #nova-chat-log-panel.collapsed {
 }
 
 
+
+/* Onglet Defis : quetes du jour, titres, classement */
+.challenge-row { padding: 8px 10px; margin-bottom: 6px; border-radius: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); }
+.challenge-row.done { border-color: rgba(250,204,21,0.55); background: rgba(250,204,21,0.08); }
+.challenge-row.equippable { cursor: pointer; }
+.challenge-text { font-weight: 600; }
+.challenge-reward, .challenge-count { font-size: 12px; opacity: 0.8; }
+.challenge-bar { height: 6px; margin: 6px 0 2px; border-radius: 3px; background: rgba(255,255,255,0.12); overflow: hidden; }
+.challenge-bar span { display: block; height: 100%; background: #facc15; transition: width 0.3s; }
+.challenge-board-tabs { display: flex; gap: 6px; margin-bottom: 8px; }
+.challenge-board-tabs .hub-action-btn.active { outline: 2px solid #facc15; }

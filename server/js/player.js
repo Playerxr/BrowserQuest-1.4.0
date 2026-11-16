@@ -7,6 +7,7 @@ var cls = require("./lib/class"),
     Utils = require("./utils"),
     Properties = require("./properties"),
     Economy = require("./economy"),
+    Progression = require("./progression"),
     Formulas = require("./formulas"),
     check = require("./format").check,
     Types = require("../../shared/js/gametypes"),
@@ -1254,6 +1255,15 @@ module.exports = Player = Character.extend({
                 t: Number(data.t) || Date.now(),
                 serverTime: Date.now()
             }).serialize());
+            return;
+        }
+
+        if(Progression.handles(subAction)) {
+            try {
+                Progression.handle(this, subAction, data);
+            } catch(error) {
+                log.error('Progression error (' + subAction + '): ' + error.message);
+            }
             return;
         }
 

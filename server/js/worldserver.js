@@ -736,6 +736,13 @@ module.exports = World = cls.Class.extend({
                         killer.onMobKilledForNpcQuest(mob);
                     }
 
+                    // Quetes journalieres, titres et statistiques
+                    try {
+                        require('./progression').afterKill(killer, mob);
+                    } catch(progressionError) {
+                        log.error('Progression kill hook: ' + progressionError.message);
+                    }
+
                     // Progression des Quêtes Collectives de Guilde (Guildes 3.0)
                     if(killer.guildId && this.databaseHandler && this.databaseHandler.addGuildQuestProgress) {
                         var killsCount = Types.isBoss(mob.kind) ? 25 : 1;
