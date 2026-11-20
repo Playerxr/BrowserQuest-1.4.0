@@ -357,6 +357,30 @@ define(['jquery', 'app', 'entrypoint'], function($, App, EntryPoint) {
                     app.hideWindows();
                 });
             } else {
+                $('#foreground').mousedown(function(event) {
+                    if(event.which && event.which !== 1) return;
+                    app.center();
+                    app.setMouseCoordinates(event);
+                    var pos = (game && game.getMouseGridPosition) ? game.getMouseGridPosition() : null;
+                    if(isPadActiveOnMobile(pos)) {
+                        app.hideWindows();
+                        return false;
+                    }
+                    if(game && !app.dropDialogPopuped) {
+                        game.pvpFlag = event.shiftKey;
+                        var hasEntity = pos && (game.getMobAt(pos.x, pos.y) || game.getNpcAt(pos.x, pos.y) || game.getChestAt(pos.x, pos.y) || game.getItemAt(pos.x, pos.y));
+                        if(!hasEntity) {
+                            game.mouseHeld = true;
+                            game._lastHoldTarget = null;
+                        }
+                    }
+                });
+                $(document).mouseup(function() {
+                    if(game && game.mouseHeld) {
+                        game.mouseHeld = false;
+                        game._lastHoldTarget = null;
+                    }
+                });
                 $('#foreground').click(function(event) {
                     app.center();
                     app.setMouseCoordinates(event);
@@ -510,7 +534,12 @@ define(['jquery', 'app', 'entrypoint'], function($, App, EntryPoint) {
                             game.player.moveDown = true;
                             break;
                         case Types.Keys.SPACE:
-                            game.makePlayerAttackClosest();
+                        case 69: // E : interagir / attaquer la cible la plus proche
+                            if(typeof game.makePlayerInteractClosest === 'function') {
+                                game.makePlayerInteractClosest();
+                            } else {
+                                game.makePlayerAttackClosest();
+                            }
                             break;
                         case Types.Keys.I:
                             $('#achievementsbutton').click();

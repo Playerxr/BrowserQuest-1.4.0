@@ -238,6 +238,15 @@ define(['entity', 'transition', 'timer'], function(Entity, Transition, Timer) {
                         this.step += 1;
                         this.updateMovement();
                     }
+                    else if(this.continue_step_callback && this.continue_step_callback(this.gridX, this.gridY)) {
+                        // Direct input (keyboard / joystick) extended the path in-place
+                        if(this.hasNextStep()) {
+                            this.step += 1;
+                            this.updateMovement();
+                        } else {
+                            stop = true;
+                        }
+                    }
                     else {
                         stop = true;
                     }
@@ -252,6 +261,10 @@ define(['entity', 'transition', 'timer'], function(Entity, Transition, Timer) {
                     }
                 }
             }
+        },
+
+        onContinueStep: function(callback) {
+            this.continue_step_callback = callback;
         },
 
         onCheckDoor: function(callback) {

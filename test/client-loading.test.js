@@ -644,6 +644,33 @@ test('Character.nextStep stops immediately on a door tile even when newDestinati
     assert.equal(c.newDestination, null);
 });
 
+test('Character.nextStep chains seamlessly into the next tile via onContinueStep without stopping or idling', () => {
+    const Entity = load('entity.js');
+    const Transition = load('transition.js');
+    const Timer = load('timer.js');
+    const Character = load('character.js', {}, { entity: Entity, transition: Transition, timer: Timer });
+
+    const c = new Character(1, Types.Entities.WARRIOR);
+    c.setGridPosition(10, 10);
+    c.path = [[10, 10], [11, 10]];
+    c.step = 1;
+
+    let stopCalled = false;
+    c.onStopPathing(() => { stopCalled = true; });
+    c.onContinueStep((gx, gy) => {
+        c.path.push([gx + 1, gy]);
+        c.nextGridX = gx + 1;
+        c.nextGridY = gy;
+        return true;
+    });
+
+    c.nextStep();
+    assert.equal(stopCalled, false);
+    assert.equal(c.isMoving(), true);
+    assert.equal(c.step, 2);
+    assert.deepEqual(c.path[c.step], [12, 10]);
+});
+
 test('Map._getDoors normalizes 30x14 camera coordinates while preserving legacy tcx/tcy and doorX/doorY', () => {
     const Area = load('area.js');
     const MapModule = load('map.js', { Worker: undefined }, { area: Area });

@@ -1998,10 +1998,11 @@ define(['jquery', 'storage'], function($, Storage) {
                 this.initMobileServerConfig();
             }
 
-            // Charger préférences ou appliquer défauts (tap-to-move activé par défaut : disableTouchMove = false)
+            // Charger préférences ou appliquer défauts (contrôle joystick direct par défaut : disableTouchMove = true)
             var savedScale = parseInt(localStorage.getItem('nova_pad_scale') || '100', 10);
             var savedOpacity = parseInt(localStorage.getItem('nova_pad_opacity') || '90', 10);
-            var savedTouchMove = localStorage.getItem('nova_disable_touch_move') === 'true';
+            var rawTouchMove = localStorage.getItem('nova_disable_touch_move');
+            var savedTouchMove = (rawTouchMove === null) ? true : (rawTouchMove === 'true');
             self.setPadScale(savedScale);
             self.setPadOpacity(savedOpacity);
             self.setDisableTouchMove(savedTouchMove);
@@ -2059,7 +2060,7 @@ define(['jquery', 'storage'], function($, Storage) {
                 $('#joystick-stick').css('transform', 'translate(0px, 0px)');
             };
 
-            // Joystick virtuel analogique fluide (sans D-pad)
+            // Joystick virtuel analogique fluide (8 directions + glissement murs)
             var $joyZone = $('#mobile-joystick-zone');
             var lastVibratedDir = null;
             var joyDragging = false;
@@ -2081,24 +2082,36 @@ define(['jquery', 'storage'], function($, Storage) {
 
                 if(!self.game || !self.game.player || !self.game.started) return;
 
-                var deadzone = 10;
+                var deadzone = 8;
                 var up = false, down = false, left = false, right = false;
                 var currentDir = null;
 
                 if(dist >= deadzone) {
-                    var deg = Math.atan2(dy, dx) * 180 / Math.PI; // -180° à +180°
-                    if(deg >= -45 && deg <= 45) {
+                    var deg = Math.atan2(dy, dx) * 180 / Math.PI; // -180° à +180° (8 secteurs de 45°)
+                    if(deg >= -22.5 && deg < 22.5) {
                         right = true;
-                        currentDir = 'right';
-                    } else if(deg > 45 && deg < 135) {
+                        currentDir = 'r';
+                    } else if(deg >= 22.5 && deg < 67.5) {
+                        right = true; down = true;
+                        currentDir = 'dr';
+                    } else if(deg >= 67.5 && deg < 112.5) {
                         down = true;
-                        currentDir = 'down';
-                    } else if(deg <= -45 && deg > -135) {
+                        currentDir = 'd';
+                    } else if(deg >= 112.5 && deg < 157.5) {
+                        down = true; left = true;
+                        currentDir = 'dl';
+                    } else if(deg >= -67.5 && deg < -22.5) {
+                        up = true; right = true;
+                        currentDir = 'ur';
+                    } else if(deg >= -112.5 && deg < -67.5) {
                         up = true;
-                        currentDir = 'up';
+                        currentDir = 'u';
+                    } else if(deg >= -157.5 && deg < -112.5) {
+                        up = true; left = true;
+                        currentDir = 'ul';
                     } else {
                         left = true;
-                        currentDir = 'left';
+                        currentDir = 'l';
                     }
 
                     if(currentDir && currentDir !== lastVibratedDir) {

@@ -9,14 +9,14 @@ define(['character', 'timer'], function(Character, Timer) {
 
         update: function() {
             this.updateZoning();
+            this.updateTransitions();
+            this.updateKeyboardMovement();
             this.updateCharacters();
             this.updatePlayerAggro();
-            this.updateTransitions();
             this.updateAnimations();
             this.updateAnimatedTiles();
             this.updateChatBubbles();
             this.updateInfos();
-            this.updateKeyboardMovement();
             this.updateRegionToast();
             this.updateMinimap();
         },
@@ -132,10 +132,9 @@ define(['character', 'timer'], function(Character, Timer) {
         updateCharacter: function(c) {
             var self = this;
 
-            // Estimate of the movement distance for one update
-            var tick = Math.round(16 / Math.round((c.moveSpeed / (1000 / this.game.renderer.FPS))));
-
             if(c.isMoving() && c.movement.inProgress === false) {
+                var startX = c.gridX * 16,
+                    startY = c.gridY * 16;
                 if(c.orientation === Types.Orientations.LEFT) {
                     c.movement.start(this.game.currentTime,
                                      function(x) {
@@ -147,8 +146,8 @@ define(['character', 'timer'], function(Character, Timer) {
                                         c.hasMoved();
                                         c.nextStep();
                                      },
-                                     c.x - tick,
-                                     c.x - 16,
+                                     startX,
+                                     startX - 16,
                                      c.moveSpeed);
                 }
                 else if(c.orientation === Types.Orientations.RIGHT) {
@@ -162,8 +161,8 @@ define(['character', 'timer'], function(Character, Timer) {
                                         c.hasMoved();
                                         c.nextStep();
                                      },
-                                     c.x + tick,
-                                     c.x + 16,
+                                     startX,
+                                     startX + 16,
                                      c.moveSpeed);
                 }
                 else if(c.orientation === Types.Orientations.UP) {
@@ -177,8 +176,8 @@ define(['character', 'timer'], function(Character, Timer) {
                                         c.hasMoved();
                                         c.nextStep();
                                      },
-                                     c.y - tick,
-                                     c.y - 16,
+                                     startY,
+                                     startY - 16,
                                      c.moveSpeed);
                 }
                 else if(c.orientation === Types.Orientations.DOWN) {
@@ -192,47 +191,31 @@ define(['character', 'timer'], function(Character, Timer) {
                                         c.hasMoved();
                                         c.nextStep();
                                      },
-                                     c.y + tick,
-                                     c.y + 16,
+                                     startY,
+                                     startY + 16,
                                      c.moveSpeed);
                 }
             }
         },
-        
-        updateKeyboardMovement: function()
-        {           
-            if(!this.game.player || this.game.player.isMoving())
+
+        updateKeyboardMovement: function() {
+            var game = this.game,
+                player = game ? game.player : null;
+            if(!player) return;
+
+            // Maintien du clic souris : suivre le curseur en continu
+            if(game.mouseHeld && !player.moveUp && !player.moveDown && !player.moveLeft && !player.moveRight) {
+                if(typeof game.stepMouseHold === 'function') {
+                    game.stepMouseHold();
+                }
                 return;
+            }
 
-            var game = this.game;
-            var player = this.game.player;
-                
-            var pos = {
-                x: player.gridX,
-                y: player.gridY
-            };
+            if(player.isMoving()) return;
 
-            if(player.moveUp)
-            {
-                pos.y -= 1;
-                game.keys(pos, Types.Orientations.UP);
+            if(typeof game.tryDirectStep === 'function') {
+                game.tryDirectStep();
             }
-            else if(player.moveDown)
-            {
-                pos.y += 1;
-                game.keys(pos, Types.Orientations.DOWN);
-            }
-            else if(player.moveRight)
-            {
-                pos.x += 1;
-                game.keys(pos, Types.Orientations.RIGHT);
-            }
-            else if(player.moveLeft)
-            {
-                pos.x -= 1;
-                game.keys(pos, Types.Orientations.LEFT);
-            }
-        
         },
 
         updateAnimations: function() {

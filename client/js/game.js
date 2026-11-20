@@ -957,6 +957,12 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
                     // Completed tile steps are sent below. Sending the final
                     // path destination here would teleport the server position.
 
+                    // En contrôle direct (clavier / joystick / maintien souris), ne pas afficher la croix verte de clic
+                    if(self.player._directControlActive) {
+                        self.selectedCellVisible = false;
+                        return;
+                    }
+
                     // Target cursor position
                     self.selectedX = x;
                     self.selectedY = y;
@@ -990,6 +996,12 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
                 self.player.onCheckDoor(function(x, y) {
                     return Boolean(self.map && self.map.isDoor(x, y));
                 });
+
+                if(typeof self.player.onContinueStep === 'function') {
+                    self.player.onContinueStep(function(gx, gy) {
+                        return self.continueDirectStep(gx, gy);
+                    });
+                }
 
                 self.player.onDoorStopGuard(function(x, y, hadNewDest, hadNextStep) {
                     if(self.doorDiagnostics) {
@@ -2651,6 +2663,135 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
         },
 
         /**
+         * Choisit la prochaine case orthogonale pour le contrôle direct (clavier / joystick)
+         * avec alternance diagonale et glissement le long des murs (wall-sliding).
+         */
+        pickDirectNextTile: function(fromX, fromY) {
+            var p = this.player;
+            if(!p || !this.map) return null;
+            var dx = (p.moveRight ? 1 : 0) - (p.moveLeft ? 1 : 0);
+            var dy = (p.moveDown ? 1 : 0) - (p.moveUp ? 1 : 0);
+            if(dx === 0 && dy === 0) return null;
+
+            var self = this;
+            var canStep = function(tx, ty) {
+                if(self.map.isOutOfBounds(tx, ty)) return false;
+                if(self.map.isColliding(tx, ty)) return false;
+                return true;
+            };
+
+            var candidates = [];
+            if(dx !== 0 && dy !== 0) {
+                // Diagonale : alterner horizontal et vertical à chaque pas pour suivre une vraie diagonale
+                var preferHorizontal = (p._lastDiagAxis !== 'h');
+                if(preferHorizontal) {
+                    candidates.push({ x: fromX + dx, y: fromY, axis: 'h' });
+                    candidates.push({ x: fromX, y: fromY + dy, axis: 'v' });
+                } else {
+                    candidates.push({ x: fromX, y: fromY + dy, axis: 'v' });
+                    candidates.push({ x: fromX + dx, y: fromY, axis: 'h' });
+                }
+            } else if(dx !== 0) {
+                candidates.push({ x: fromX + dx, y: fromY, axis: 'h' });
+            } else {
+                candidates.push({ x: fromX, y: fromY + dy, axis: 'v' });
+            }
+
+            for(var i = 0; i < candidates.length; i++) {
+                var c = candidates[i];
+                if(canStep(c.x, c.y)) {
+                    p._lastDiagAxis = c.axis;
+                    return { x: c.x, y: c.y };
+                }
+            }
+            // Si la case directe est un mur de seuil de porte, conserver l'assistance de sortie
+            return { x: candidates[0].x, y: candidates[0].y, blocked: true };
+        },
+
+        /**
+         * Démarre un pas en contrôle direct (clavier ou joystick) lorsque le joueur est à l'arrêt.
+         */
+        tryDirectStep: function() {
+            var p = this.player;
+            if(!this.started || !p || p.isDead || this.isZoning() || p.isMoving()) return false;
+            var next = this.pickDirectNextTile(p.gridX, p.gridY);
+            if(!next) {
+                p._directControlActive = false;
+                return false;
+            }
+            p._directControlActive = true;
+            this.selectedCellVisible = false;
+            this.cursorVisible = false;
+            if(next.blocked) {
+                // Permet quand même d'activer une porte si le joueur pousse contre le seuil
+                this.keys({ x: next.x, y: next.y });
+                return false;
+            }
+            var entity = this.getMobAt(next.x, next.y) || this.getEntityAt(next.x, next.y);
+            if(entity && (entity instanceof Mob || entity instanceof Npc || entity instanceof Chest)) {
+                this.keys({ x: next.x, y: next.y });
+                return true;
+            }
+            if(p.hasTarget()) {
+                p.removeTarget();
+            }
+            p.disengage();
+            p.followPath([[p.gridX, p.gridY], [next.x, next.y]]);
+            return true;
+        },
+
+        /**
+         * Appelé à la fin exacte d'une case dans Character.nextStep() :
+         * prolonge le chemin d'une case sans repasser par idle() ni par le pathfinder A*.
+         */
+        continueDirectStep: function(gx, gy) {
+            var p = this.player;
+            if(!this.started || !p || p.isDead || this.isZoning()) return false;
+            if(this.isZoningTile(gx, gy)) return false;
+
+            var next = this.pickDirectNextTile(gx, gy);
+            if(!next || next.blocked) {
+                p._directControlActive = false;
+                return false;
+            }
+            // Ne pas traverser un monstre, un PNJ ou un coffre sans interaction
+            var entity = this.getMobAt(next.x, next.y) || this.getEntityAt(next.x, next.y);
+            if(entity && (entity instanceof Mob || entity instanceof Npc || entity instanceof Chest)) {
+                p._directControlActive = false;
+                return false;
+            }
+            p._directControlActive = true;
+            this.selectedCellVisible = false;
+            p.path.push([next.x, next.y]);
+            p.nextGridX = next.x;
+            p.nextGridY = next.y;
+            this.registerEntityDualPosition(p);
+            return true;
+        },
+
+        /**
+         * Maintien du clic souris sur PC : le héros suit le curseur en continu tant que le bouton est pressé.
+         */
+        stepMouseHold: function() {
+            var p = this.player;
+            if(!this.started || !p || p.isDead || this.isZoning()) return;
+            var pos = this.getMouseGridPosition();
+            if(!pos) return;
+            if(pos.x === p.gridX && pos.y === p.gridY) return;
+            if(this._lastHoldTarget && this._lastHoldTarget.x === pos.x && this._lastHoldTarget.y === pos.y && p.isMoving()) {
+                return;
+            }
+            this._lastHoldTarget = { x: pos.x, y: pos.y };
+            p._directControlActive = true;
+            this.selectedCellVisible = false;
+            this.hoveringCollidingTile = false;
+            this.hoveringPlateauTile = false;
+            if(!this.map.isOutOfBounds(pos.x, pos.y) && !this.map.isColliding(pos.x, pos.y)) {
+                this.makePlayerGoTo(pos.x, pos.y);
+            }
+        },
+
+        /**
          * Moves the player one space, if possible
          */
         keys: function(pos, orientation) {
@@ -2679,6 +2820,10 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
             var pos = this.getMouseGridPosition();
             var targetMob = this.getMobAt(pos.x, pos.y);
             var isEntityClick = Boolean(targetMob || this.getEntityAt(pos.x, pos.y));
+
+            if(this.player) {
+                this.player._directControlActive = false;
+            }
 
             var standingOnDoor = Boolean(this.player && this.map && this.map.isDoor(this.player.gridX, this.player.gridY));
             if(!standingOnDoor && !isEntityClick && pos.x === this.previousClickPosition.x && pos.y === this.previousClickPosition.y) {
