@@ -671,6 +671,49 @@ test('Character.nextStep chains seamlessly into the next tile via onContinueStep
     assert.deepEqual(c.path[c.step], [12, 10]);
 });
 
+test('Character.canReachTarget requires Manhattan distance 1 for melee (rejects diagonal and same-tile overlap)', () => {
+    const Entity = load('entity.js');
+    const Transition = load('transition.js');
+    const Timer = load('timer.js');
+    const Character = load('character.js', {}, { entity: Entity, transition: Transition, timer: Timer });
+
+    const player = new Character(1, Types.Entities.WARRIOR);
+    player.weaponName = 'sword1';
+    const mob = new Character(2, Types.Entities.RAT);
+    player.setTarget(mob);
+
+    player.setGridPosition(10, 10);
+    mob.setGridPosition(10, 10); // Same tile (distance 0)
+    assert.equal(player.canReachTarget(), false);
+
+    mob.setGridPosition(11, 11); // Diagonal
+    assert.equal(player.canReachTarget(), false);
+
+    mob.setGridPosition(11, 10); // Cardinal adjacent
+    assert.equal(player.canReachTarget(), true);
+});
+
+test('Camera.centerOn and followSmooth smoothly track player and clamp to map boundaries', () => {
+    const Camera = load('camera.js');
+    const cam = new Camera({ tilesize: 16 });
+    const map = { width: 100, height: 100 };
+
+    cam.centerOn({ x: 50 * 16, y: 50 * 16 }, map);
+    assert.equal(cam.x, Math.round(50 * 16 + 8 - (cam.gridW * 16) / 2));
+    assert.equal(cam.y, Math.round(50 * 16 + 8 - (cam.gridH * 16) / 2));
+
+    // Clamp at top-left edge
+    cam.centerOn({ x: 0, y: 0 }, map);
+    assert.equal(cam.x, 0);
+    assert.equal(cam.y, 0);
+
+    // Smooth follow moves toward new player position without instant jump
+    const res = cam.followSmooth({ x: 40 * 16, y: 40 * 16 }, map, 16);
+    assert.equal(res.moved, true);
+    assert.ok(cam.x > 0 && cam.x < 40 * 16);
+    assert.ok(cam.y > 0 && cam.y < 40 * 16);
+});
+
 test('Map._getDoors normalizes 30x14 camera coordinates while preserving legacy tcx/tcy and doorX/doorY', () => {
     const Area = load('area.js');
     const MapModule = load('map.js', { Worker: undefined }, { area: Area });

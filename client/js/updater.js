@@ -12,6 +12,7 @@ define(['character', 'timer'], function(Character, Timer) {
             this.updateTransitions();
             this.updateKeyboardMovement();
             this.updateCharacters();
+            this.updateCamera();
             this.updatePlayerAggro();
             this.updateAnimations();
             this.updateAnimatedTiles();
@@ -19,6 +20,29 @@ define(['character', 'timer'], function(Character, Timer) {
             this.updateInfos();
             this.updateRegionToast();
             this.updateMinimap();
+        },
+
+        updateCamera: function() {
+            var g = this.game;
+            if(!g || !g.smoothCamera || !g.started || !g.player || !g.camera || g.isZoning()) {
+                return;
+            }
+            if(typeof g.camera.followSmooth !== 'function') {
+                return;
+            }
+            var now = g.currentTime || Date.now();
+            var dt = this._lastCameraTime ? (now - this._lastCameraTime) : 16;
+            this._lastCameraTime = now;
+
+            var res = g.camera.followSmooth(g.player, g.map, dt);
+            if(res && res.moved) {
+                if(res.gridChanged && typeof g.initAnimatedTiles === 'function') {
+                    g.initAnimatedTiles();
+                }
+                if(g.renderer && typeof g.renderer.renderStaticCanvases === 'function') {
+                    g.renderer.renderStaticCanvases();
+                }
+            }
         },
 
         updateCharacters: function() {

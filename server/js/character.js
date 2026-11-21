@@ -84,8 +84,12 @@ var Character = Entity.extend({
     },
 
     forEachAttacker: function (callback) {
-        for (var id = 0; id < this.attackers.length; id++) {
-            callback(this.attackers[id]);
+        var keys = Object.keys(this.attackers);
+        for (var i = 0; i < keys.length; i++) {
+            var attacker = this.attackers[keys[i]];
+            if (attacker) {
+                callback(attacker);
+            }
         }
     }
 });

@@ -229,6 +229,7 @@ module.exports = Player = Character.extend({
                 var mob = self.server.getEntityById(message[1]);
 
                 if(Gameplay.liveMob(self, mob, 28)) {
+                    mob._targetedUntil = Date.now() + 4000;
                     self.setTarget(mob);
                     self.server.broadcastAttacker(self);
                 }
@@ -491,8 +492,21 @@ module.exports = Player = Character.extend({
         }
         var self = this,
             groupId = this.server.map.getGroupIdFromPosition(this.x, this.y),
-            group = this.server.groups[groupId],
-            candidates = _.extend({}, group ? group.entities : {}, this.attackers);
+            candidates = {};
+        if(typeof this.server.map.forEachAdjacentGroup === 'function') {
+            this.server.map.forEachAdjacentGroup(groupId, function(adjId) {
+                var adjGroup = self.server.groups[adjId];
+                if(adjGroup && adjGroup.entities) {
+                    _.extend(candidates, adjGroup.entities);
+                }
+            });
+        } else {
+            var group = this.server.groups[groupId];
+            if(group && group.entities) {
+                _.extend(candidates, group.entities);
+            }
+        }
+        _.extend(candidates, this.attackers);
         _.each(candidates, function(mob) {
             if(mob.type !== "mob" || self.server.mobs[mob.id] !== mob) {
                 return;

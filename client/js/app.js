@@ -1041,7 +1041,9 @@ define(['jquery', 'storage'], function($, Storage) {
             });
 
             self.game.onUpdateTarget(function(target){
-                $("#inspector .health").css('width', Math.round(target.healthPoints/target.maxHp*100) + "%");
+                if(!target || !target.maxHp) return;
+                var pct = Math.max(0, Math.min(100, Math.round(target.healthPoints / target.maxHp * 100)));
+                $("#inspector .health").css('width', pct + "%");
             });
 
             self.game.player.onRemoveTarget(function(targetId){

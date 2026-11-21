@@ -47,7 +47,10 @@ var hubSchemas = {
     admin_ban: { targetName: 'name' },
     admin_spawn: { mobKind: 'kind' },
     admin_spawn_chest: {},
-    admin_announce: { text: 'announcement' }
+    admin_announce: { text: 'announcement' },
+    progress_get: {},
+    leaderboard_get: {},
+    title_set: { id: 'optionalTitleId' }
 };
 
 function hubValue(value, type) {
@@ -58,6 +61,7 @@ function hubValue(value, type) {
     case 'equipment': return value === 'weapon' || value === 'armor';
     case 'kind': return text(value, 40) && /^[a-z0-9]+$/.test(value);
     case 'optionalKind': return value === undefined || hubValue(value, 'kind');
+    case 'optionalTitleId': return value === '' || (text(value, 32) && /^[a-z0-9_]+$/.test(value));
     case 'name': return text(value, 12);
     case 'tag': return text(value, 4) && value.trim().length >= 2;
     case 'guildName': return text(value, 20) && value.trim().length >= 3;

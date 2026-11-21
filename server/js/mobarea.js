@@ -53,18 +53,35 @@ var MobArea = Area.extend({
         var self = this;
 
         setInterval(function () {
+            var now = Date.now();
             _.each(self.entities, function (mob) {
                 var canRoam = (Utils.random(20) === 1);
-                var pos;
-
                 if (canRoam) {
-                    if (!mob.hasTarget() && !mob.isDead) {
-                        pos = self._getRandomPositionInsideArea();
-                        mob.move(pos.x, pos.y);
+                    if (!mob.hasTarget() && !mob.isDead && !(mob._targetedUntil && mob._targetedUntil > now)) {
+                        var pos = self._getNearbyPositionInsideArea(mob.x, mob.y, 2);
+                        if (pos && (pos.x !== mob.x || pos.y !== mob.y)) {
+                            mob.move(pos.x, pos.y);
+                        }
                     }
                 }
             });
         }, 500);
+    },
+
+    _getNearbyPositionInsideArea: function (cx, cy, maxStep) {
+        var minX = Math.max(this.x, cx - maxStep),
+            maxX = Math.min(this.x + this.width - 1, cx + maxStep),
+            minY = Math.max(this.y, cy - maxStep),
+            maxY = Math.min(this.y + this.height - 1, cy + maxStep);
+
+        for (var attempt = 0; attempt < 8; attempt++) {
+            var x = Utils.randomInt(minX, maxX),
+                y = Utils.randomInt(minY, maxY);
+            if ((x !== cx || y !== cy) && this.world.isValidPosition(x, y)) {
+                return { x: x, y: y };
+            }
+        }
+        return null;
     },
 
     createReward: function () {

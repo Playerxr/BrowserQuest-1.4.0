@@ -89,12 +89,13 @@ module.exports = World = cls.Class.extend({
                         player.removeAttacker(mob);
                         return;
                     }
-                   var target = self.getEntityById(mob.target);
+                    var target = self.getEntityById(mob.target);
                     if(target) {
                         var atkRange = Types.getMobAttackRange ? Types.getMobAttackRange(mob.kind) : 1;
                         var distToTarget = Utils.distanceTo(mob.x, mob.y, target.x, target.y);
-                        if(atkRange > 1 && distToTarget <= atkRange) {
-                            return; // Le monstre à distance est déjà à portée de tir !
+                        var manhattan = Math.abs(mob.x - target.x) + Math.abs(mob.y - target.y);
+                        if((atkRange > 1 && distToTarget <= atkRange) || (atkRange === 1 && manhattan === 1)) {
+                            return; // Déjà à portée d'attaque : ne pas téléporter le monstre sur un autre côté
                         }
                         var pos = self.findPositionNextTo(mob, target);
                         if(mob.distanceToSpawningPoint(pos.x, pos.y) > 50) {
@@ -152,8 +153,9 @@ module.exports = World = cls.Class.extend({
             if(target && attacker.type === "mob") {
                 var atkRange = Types.getMobAttackRange ? Types.getMobAttackRange(attacker.kind) : 1;
                 var distToTarget = Utils.distanceTo(attacker.x, attacker.y, target.x, target.y);
-                if(atkRange > 1 && distToTarget <= atkRange) {
-                    return; // Déjà à portée d'attaque magique/distance
+                var manhattan = Math.abs(attacker.x - target.x) + Math.abs(attacker.y - target.y);
+                if((atkRange > 1 && distToTarget <= atkRange) || (atkRange === 1 && manhattan === 1)) {
+                    return; // Déjà à portée d'attaque
                 }
                 var pos = self.findPositionNextTo(attacker, target);
                 self.moveEntity(attacker, pos.x, pos.y);
@@ -914,14 +916,26 @@ module.exports = World = cls.Class.extend({
     },
 
     findPositionNextTo: function(entity, target) {
-        var valid = false,
-            pos;
+        var candidates = [
+                { x: target.x, y: target.y - 1 },
+                { x: target.x, y: target.y + 1 },
+                { x: target.x - 1, y: target.y },
+                { x: target.x + 1, y: target.y }
+            ],
+            best = null,
+            bestDist = Infinity;
 
-        while(!valid) {
-            pos = entity.getPositionNextTo(target);
-            valid = this.isValidPosition(pos.x, pos.y);
+        for(var i = 0; i < candidates.length; i++) {
+            var c = candidates[i];
+            if(this.isValidPosition(c.x, c.y)) {
+                var d = Math.abs(entity.x - c.x) + Math.abs(entity.y - c.y);
+                if(d < bestDist) {
+                    bestDist = d;
+                    best = c;
+                }
+            }
         }
-        return pos;
+        return best || { x: entity.x, y: entity.y };
     },
 
     initZoneGroups: function() {

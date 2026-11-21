@@ -254,6 +254,9 @@ define(['entity', 'transition', 'timer'], function(Entity, Transition, Timer) {
 
                 if(stop) { // Path is complete or has been interrupted
                     this.path = null;
+                    if(this.baseMoveSpeed) {
+                        this.moveSpeed = this.baseMoveSpeed;
+                    }
                     this.idle();
 
                     if(this.stop_pathing_callback) {
@@ -571,7 +574,8 @@ define(['entity', 'transition', 'timer'], function(Entity, Transition, Timer) {
                 if(atkRange > 1) {
                     return this.getDistanceToEntity(this.target) <= atkRange;
                 }
-                if(this.isAdjacentNonDiagonal(this.target)) {
+                var manhattan = Math.abs(this.gridX - this.target.gridX) + Math.abs(this.gridY - this.target.gridY);
+                if(manhattan === 1) {
                     return true;
                 }
             }

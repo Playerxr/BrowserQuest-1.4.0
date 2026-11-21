@@ -71,8 +71,9 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
             this.projectiles = [];
             this.levelUpEffects = [];
 
-            // zoning
+            // zoning & smooth camera
             this.currentZoning = null;
+            this.smoothCamera = true;
 
             this.cursors = {};
 
@@ -1506,8 +1507,37 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
                             if(self.player.isAttackedBy(entity)) {
                                 self.tryUnlockingAchievement("COWARD");
                             }
-                            entity.disengage();
-                            entity.idle();
+                            if(!entity.baseMoveSpeed) {
+                                entity.baseMoveSpeed = entity.moveSpeed || 120;
+                            }
+                            var dist = Math.abs(x - entity.gridX) + Math.abs(y - entity.gridY);
+                            if(dist === 0) {
+                                return;
+                            }
+                            if(dist > 14) {
+                                entity.disengage();
+                                entity.path = null;
+                                entity.newDestination = null;
+                                entity.movement.stop();
+                                entity.moveSpeed = entity.baseMoveSpeed;
+                                self.makeCharacterTeleportTo(entity, x, y);
+                                entity.idle();
+                                return;
+                            }
+                            if(entity.isAttacking()) {
+                                entity.disengage();
+                            }
+                            // Rattrapage fluide en cas de retard réseau (sans téléportation ni flash idle)
+                            if(dist >= 4) {
+                                entity.moveSpeed = Math.max(70, Math.round(entity.baseMoveSpeed * 0.72));
+                            } else if(dist >= 2) {
+                                entity.moveSpeed = Math.max(85, Math.round(entity.baseMoveSpeed * 0.85));
+                            } else {
+                                entity.moveSpeed = entity.baseMoveSpeed;
+                            }
+                            if(!entity.isMoving()) {
+                                entity.idle();
+                            }
                             self.makeCharacterGoTo(entity, x, y);
                         }
                     }
@@ -1557,12 +1587,21 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
 
                 self.client.onPlayerDamageMob(function(mobId, points, healthPoints, maxHp) {
                     var mob = self.getEntityById(mobId);
-                    if(mob && points) {
-                        self.infoManager.addDamageInfo(points, mob.x, mob.y - 15, "inflicted");
+                    if(mob) {
+                        if(typeof healthPoints === 'number' && !isNaN(healthPoints)) {
+                            mob.healthPoints = Math.max(0, healthPoints);
+                        }
+                        if(typeof maxHp === 'number' && maxHp > 0) {
+                            mob.maxHp = maxHp;
+                        }
+                        if(typeof mob.hurt === 'function') {
+                            mob.hurt();
+                        }
+                        if(points) {
+                            self.infoManager.addDamageInfo(points, mob.x, mob.y - 15, "inflicted");
+                        }
                     }
-                    if(self.player.hasTarget()){
-                        self.updateTarget(mobId, points, healthPoints, maxHp);
-                    }
+                    self.updateTarget(mobId, points, healthPoints, maxHp);
                 });
 
                 self.client.onPlayerKillMob(function(kind, level, exp) {
@@ -1858,12 +1897,10 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
                 c = this.renderer.camera,
                 s = this.renderer.scale,
                 ts = this.renderer.tilesize,
-                offsetX = mx % (ts * s),
-                offsetY = my % (ts * s),
-                x = ((mx - offsetX) / (ts * s)) + c.gridX,
-                y = ((my - offsetY) / (ts * s)) + c.gridY;
+                x = Math.floor(((mx / s) + c.x) / ts),
+                y = Math.floor(((my / s) + c.y) / ts);
 
-                return { x: x, y: y };
+            return { x: x, y: y };
         },
 
         /**
@@ -2154,6 +2191,16 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
         },
 
         makePlayerAttack: function(mob) {
+            if(!mob || mob.isDead) return;
+            if(this.player && typeof this.player.isAttacking === 'function' && this.player.isAttacking() && this.player.target === mob) {
+                if(!this.player.canReachTarget() && !this.player.isMoving()) {
+                    this.player.follow(mob);
+                } else if(this.player.canReachTarget()) {
+                    this.player.lookAtTarget();
+                }
+                this.triggerAttackHaptic();
+                return;
+            }
             this.createAttackLink(this.player, mob);
             this.triggerAttackHaptic();
             this.client.sendAttack(mob);
@@ -2228,7 +2275,7 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
                         });
                     }
                 }
-            }, this.renderer.mobile ? 0 : 2);
+            }, 2);
         },
 
         /**
@@ -2567,7 +2614,10 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
             this.registerEntityPosition(this.player);
             this.client.sendTeleport(dest.x, dest.y);
 
-            if(this.renderer.mobile && this.camera.gridW <= 15 && dest.cameraX && dest.cameraY) {
+            if(this.smoothCamera && typeof this.camera.centerOn === 'function') {
+                this.camera.centerOn(this.player, this.map);
+                this.resetZone();
+            } else if(this.renderer.mobile && this.camera.gridW <= 15 && dest.cameraX && dest.cameraY) {
                 this.camera.setGridPosition(dest.cameraX, dest.cameraY);
                 this.resetZone();
             } else {
@@ -2729,6 +2779,9 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
             }
             var entity = this.getMobAt(next.x, next.y) || this.getEntityAt(next.x, next.y);
             if(entity && (entity instanceof Mob || entity instanceof Npc || entity instanceof Chest)) {
+                if(entity instanceof Mob && p.isAttacking() && p.target === entity) {
+                    return true;
+                }
                 this.keys({ x: next.x, y: next.y });
                 return true;
             }
@@ -3062,10 +3115,17 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
                 } else {
                     if(character.hasTarget()
                     && !isRanged
-                    && character.isDiagonallyAdjacent(character.target)
-                    && character.target instanceof Player
-                    && !character.target.isMoving()) {
-                        character.follow(character.target);
+                    && !character.isMoving()
+                    && !character.canReachTarget()) {
+                        var dist = character.getDistanceToEntity(character.target);
+                        if(dist === 0) {
+                            var freePos = this.getFreeAdjacentNonDiagonalPosition(character.target);
+                            if(freePos) {
+                                this.makeCharacterGoTo(character, freePos.x, freePos.y);
+                            }
+                        } else if(character.id === this.playerId || (character.target instanceof Player && !character.target.isMoving())) {
+                            character.follow(character.target);
+                        }
                     }
                 }
             }
@@ -3075,6 +3135,9 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
          *
          */
         isZoningTile: function(x, y) {
+            if(this.smoothCamera) {
+                return false;
+            }
             var c = this.camera;
 
             x = x - c.gridX;
@@ -3176,7 +3239,11 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
         },
 
         resetCamera: function() {
-            this.camera.focusEntity(this.player);
+            if(this.smoothCamera && typeof this.camera.centerOn === 'function') {
+                this.camera.centerOn(this.player, this.map);
+            } else {
+                this.camera.focusEntity(this.player);
+            }
             this.resetZone();
         },
 
@@ -3423,13 +3490,15 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
             }
         },
         updateTarget: function(targetId, points, healthPoints, maxHp){
-            if(this.player.hasTarget() && this.updatetarget_callback){
-                var target = this.getEntityById(targetId);
+            var target = this.getEntityById(targetId);
+            if(target) {
                 target.name = Types.getKindAsString(target.kind);
                 target.points = points;
-                target.healthPoints = healthPoints;
+                target.healthPoints = Math.max(0, healthPoints);
                 target.maxHp = maxHp;
-                this.updatetarget_callback(target);
+                if(this.player && this.player.hasTarget() && this.player.target && this.player.target.id === target.id && this.updatetarget_callback){
+                    this.updatetarget_callback(target);
+                }
             }
         },
     
@@ -3536,7 +3605,7 @@ function(InfoManager, BubbleManager, Renderer, Map, Animation, Sprite, AnimatedT
         makeAttackerFollow: function(attacker) {
               var target = attacker.target;
 
-              if(attacker.canReachTarget() || attacker.isAdjacent(attacker.target)) {
+              if(attacker.canReachTarget()) {
                     attacker.lookAtTarget();
               } else {
                   attacker.follow(target);

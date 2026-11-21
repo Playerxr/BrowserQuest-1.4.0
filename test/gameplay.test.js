@@ -246,3 +246,19 @@ test("the final life restores three lives at the initial starting area", functio
     assert.equal(f.player.lastCheckpoint, null);
     assert.deepEqual([f.player.x, f.player.y], [5, 5]);
 });
+
+test("server Character.forEachAttacker iterates over all attacking mobs keyed by id", function(t) {
+    var f = fixture(t);
+    var mob1 = addMob(f, {id: 101, x: 11, y: 10});
+    var mob2 = addMob(f, {id: 202, x: 9, y: 10});
+    f.player.addAttacker(mob1);
+    f.player.addAttacker(mob2);
+    var seen = [];
+    f.player.forEachAttacker(function(m) {
+        seen.push(m.id);
+        f.player.removeAttacker(m);
+    });
+    assert.deepEqual(seen.sort((a, b) => a - b), [101, 202]);
+    assert.deepEqual(Object.keys(f.player.attackers), []);
+});
+

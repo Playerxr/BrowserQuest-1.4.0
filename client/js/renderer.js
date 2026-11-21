@@ -621,6 +621,21 @@ function(Camera, Item, Character, Player, Timer) {
                               true,
                               "#ff4d4d");
             }
+            // Barre de PV miniature au-dessus des monstres blessés ou ciblés
+            if(entity && !entity.isDying && !(entity instanceof Player) &&
+               typeof entity.healthPoints === 'number' && entity.maxHp > 0 &&
+               (entity.healthPoints < entity.maxHp || (this.game && this.game.player && this.game.player.target === entity))) {
+                var ratio = Math.max(0, Math.min(1, entity.healthPoints / entity.maxHp)),
+                    barW = (entity.bossTitle ? 26 : 16) * this.scale,
+                    barH = Math.max(2, Math.round(2.5 * this.scale)),
+                    barX = Math.round(((entity.x + 8) * this.scale) - (barW / 2)),
+                    barY = Math.round((entity.y - (entity.bossTitle ? 12 : 6)) * this.scale),
+                    hpCtx = this.context;
+                hpCtx.fillStyle = "rgba(15, 23, 42, 0.85)";
+                hpCtx.fillRect(barX - 1, barY - 1, barW + 2, barH + 2);
+                hpCtx.fillStyle = ratio > 0.5 ? "#22c55e" : (ratio > 0.25 ? "#facc15" : "#ef4444");
+                hpCtx.fillRect(barX, barY, Math.round(barW * ratio), barH);
+            }
             this.context.restore();
         },
 
